@@ -129,6 +129,9 @@ def create_app(config_name=None):
     def server_error(e):
         return render_template("errors/500.html"), 500
 
+    # Ensure instance folder exists (needed for SQLite)
+    os.makedirs(app.instance_path, exist_ok=True)
+
     # Create all tables and seed default admin on first run
     with app.app_context():
         from app.models import register_models

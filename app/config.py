@@ -1,6 +1,10 @@
 import os
 from sqlalchemy.pool import NullPool
 
+# Absolute path to instance folder (same directory as this file's parent)
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_DEFAULT_DB = f"sqlite:///{os.path.join(_BASE_DIR, 'instance', 'socialpulse.db')}"
+
 
 def _sqlite_engine_options(uri):
     """Return SQLAlchemy engine options tuned for SQLite concurrency."""
@@ -15,15 +19,11 @@ def _sqlite_engine_options(uri):
 
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL", "postgresql://socialpulse:socialpulse@localhost:5432/socialpulse"
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", _DEFAULT_DB)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = _sqlite_engine_options(
-        os.getenv("DATABASE_URL", "")
+        os.getenv("DATABASE_URL", _DEFAULT_DB)
     )
-    CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     WTF_CSRF_ENABLED = True
 
     # Mail settings for email verification
