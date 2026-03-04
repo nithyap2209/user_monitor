@@ -1,0 +1,53 @@
+<!-- Flash message toast notifications -->
+<div id="toast-container" class="fixed top-4 right-4 z-[9998] space-y-3 max-w-sm w-full pointer-events-none">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="toast-msg toast-slide-in pointer-events-auto flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border text-sm
+        {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800
+        {% elif category == 'danger' %}bg-rose-50 border-rose-200 text-rose-800
+        {% elif category == 'warning' %}bg-amber-50 border-amber-200 text-amber-800
+        {% else %}bg-indigo-50 border-indigo-200 text-indigo-800{% endif %}"
+        role="alert">
+        <div class="flex-shrink-0 mt-0.5">
+            {% if category == 'success' %}
+            <i class="fas fa-check-circle text-emerald-500"></i>
+            {% elif category == 'danger' %}
+            <i class="fas fa-exclamation-circle text-rose-500"></i>
+            {% elif category == 'warning' %}
+            <i class="fas fa-exclamation-triangle text-amber-500"></i>
+            {% else %}
+            <i class="fas fa-info-circle text-indigo-500"></i>
+            {% endif %}
+        </div>
+        <span class="flex-1">{{ message }}</span>
+        <button onclick="dismissToast(this.parentElement)" class="flex-shrink-0 ml-2 opacity-60 hover:opacity-100 transition-opacity">
+            <i class="fas fa-times text-xs"></i>
+        </button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+</div>
+
+<script>
+    function dismissToast(el) {
+        el.classList.remove('toast-slide-in');
+        el.classList.add('toast-fade-out');
+        setTimeout(function() {
+            el.remove();
+        }, 400);
+    }
+
+    // Auto-dismiss all toasts after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        var toasts = document.querySelectorAll('.toast-msg');
+        toasts.forEach(function(toast) {
+            setTimeout(function() {
+                if (toast && toast.parentElement) {
+                    dismissToast(toast);
+                }
+            }, 5000);
+        });
+    });
+</script>

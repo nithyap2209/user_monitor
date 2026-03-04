@@ -1,0 +1,93 @@
+/* Custom styles beyond Tailwind CDN */
+
+/* Hide scrollbar but keep scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Toast animations */
+.toast-msg {
+    animation: toast-slide-in 0.3s ease-out;
+}
+@keyframes toast-slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Skeleton pulse */
+.skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+}
+@keyframes skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Inbox split panel */
+.inbox-left { min-width: 320px; }
+.inbox-comment-card {
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+.inbox-comment-card:hover {
+    background-color: #f8fafc;
+}
+.inbox-comment-card.active {
+    background-color: #eef2ff;
+    border-left: 4px solid #4f46e5;
+}
+
+/* Sentiment dot */
+.sentiment-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.sentiment-dot.positive { background-color: #10b981; }
+.sentiment-dot.negative { background-color: #f43f5e; }
+.sentiment-dot.neutral  { background-color: #6b7280; }
+.sentiment-dot.lead     { background-color: #3b82f6; }
+.sentiment-dot.business { background-color: #8b5cf6; }
+
+/* Button spinner overlay */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* Sync video card slide-up animation */
+@keyframes slideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Platform icon colors */
+.platform-facebook  { color: #1877F2; }
+.platform-instagram { color: #E4405F; }
+.platform-youtube   { color: #FF0000; }
+.platform-linkedin  { color: #0A66C2; }
+.platform-twitter   { color: #000000; }
+.platform-google_reviews { color: #4285F4; }

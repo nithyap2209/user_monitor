@@ -1,0 +1,56 @@
+{% if pagination and pagination.pages > 1 %}
+<nav class="flex items-center justify-between mt-6" aria-label="Pagination">
+    <p class="text-sm text-gray-500">
+        Showing
+        <span class="font-medium text-gray-700">{{ ((pagination.page - 1) * pagination.per_page) + 1 }}</span>
+        to
+        <span class="font-medium text-gray-700">{{ [pagination.page * pagination.per_page, pagination.total] | min }}</span>
+        of
+        <span class="font-medium text-gray-700">{{ pagination.total }}</span>
+        results
+    </p>
+    <div class="flex items-center gap-1">
+        {# Previous button #}
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}"
+           class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150">
+            <i class="fas fa-chevron-left text-xs mr-1"></i> Prev
+        </a>
+        {% else %}
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-300 cursor-not-allowed">
+            <i class="fas fa-chevron-left text-xs mr-1"></i> Prev
+        </span>
+        {% endif %}
+
+        {# Page numbers #}
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                {% if p == pagination.page %}
+                <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium bg-indigo-600 text-white">
+                    {{ p }}
+                </span>
+                {% else %}
+                <a href="?page={{ p }}"
+                   class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-150">
+                    {{ p }}
+                </a>
+                {% endif %}
+            {% else %}
+                <span class="inline-flex items-center justify-center w-9 h-9 text-gray-400 text-sm">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {# Next button #}
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}"
+           class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors duration-150">
+            Next <i class="fas fa-chevron-right text-xs ml-1"></i>
+        </a>
+        {% else %}
+        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-300 cursor-not-allowed">
+            Next <i class="fas fa-chevron-right text-xs ml-1"></i>
+        </span>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

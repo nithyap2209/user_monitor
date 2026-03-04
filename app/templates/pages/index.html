@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% block title %}Connected Pages — User Monitor{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Connected Pages</h2>
+        <p class="text-sm text-gray-500 mt-1">Manage your social media page connections</p>
+    </div>
+    <button onclick="openModal('connectModal')"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center gap-2">
+        <i class="fas fa-plus"></i> Connect Page
+    </button>
+</div>
+
+<!-- Page Cards Grid -->
+{% if connected_pages %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for page in connected_pages %}
+    <div class="bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition {{ 'opacity-60' if page.status == 'disconnected' }}">
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+                {# Build profile URL: use stored page_url first, then fallback by platform #}
+                {% if page.page_url %}
+                    {% set _page_profile_url = page.page_url %}
+                {% elif page.platform == 'facebook' %}
+                    {% set _page_profile_url = 'https://www.facebook.com/' ~ page.page_id %}
+                {% elif page.platform == 'youtube' %}
+                    {% set _page_profile_url = 'https://www.youtube.com/channel/' ~ page.page_id %}
+                {% else %}
+                    {% set _page_profile_url = None %}
+                {% endif %}
+
+                {% if _page_profile_url %}
+                <a href="{{ _page_profile_url }}" target="_blank" rel="noopener noreferrer"
+                   class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition flex-shrink-0" title="Open on {{ platform_labels.get(page.platform, page.platform) }}">
+                    <i class="fab fa-{{ page.platform }} text-lg
+                        {% if page.platform == 'facebook' %}text-blue-600
+                        {% elif page.platform == 'instagram' %}text-pink-500
+                        {% elif page.platform == 'youtube' %}text-red-600
+                        {% elif page.platform == 'linkedin' %}text-blue-700
+                        {% elif page.platform == 'twitter' %}text-gray-800
+                        {% else %}text-gray-500{% endif %}"></i>
+                </a>
+                {% else %}
+                <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <i class="fab fa-{{ page.platform }} text-lg
+                        {% if page.platform == 'facebook' %}text-blue-600
+                        {% elif page.platform == 'instagram' %}text-pink-500
+                        {% elif page.platform == 'youtube' %}text-red-600
+                        {% elif page.platform == 'linkedin' %}text-blue-700
+                        {% elif page.platform == 'twitter' %}text-gray-800
+                        {% else %}text-gray-500{% endif %}"></i>
+                </div>
+                {% endif %}
+
+                <div>
+                    {% if _page_profile_url %}
+                    <a href="{{ _page_profile_url }}" target="_blank" rel="noopener noreferrer"
+                       class="font-medium text-gray-800 hover:text-indigo-600 hover:underline transition">{{ page.page_name }}</a>
+                    {% else %}
+                    <p class="font-medium text-gray-800">{{ page.page_name }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500">{{ platform_labels.get(page.platform, page.platform) }}</p>
+                    {% if page.page_id %}
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">ID: {{ page.page_id }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Status badge -->
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                {% if page.status == 'connected' %}bg-emerald-100 text-emerald-700
+                {% elif page.status == 'disconnected' %}bg-rose-100 text-rose-700
+                {% elif page.status == 'expired' %}bg-amber-100 text-amber-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {% if page.status == 'connected' %}<i class="fas fa-check-circle mr-1"></i>
+                {% elif page.status == 'disconnected' %}<i class="fas fa-times-circle mr-1"></i>
+                {% elif page.status == 'expired' %}<i class="fas fa-exclamation-circle mr-1"></i>{% endif %}
+                {{ page.status|capitalize }}
+            </span>
+        </div>
+
+        <!-- Last synced -->
+        {% if page.last_synced_at %}
+        <p class="text-xs text-gray-400 mb-4">
+            <i class="fas fa-sync-alt mr-1"></i> Last synced: <span class="local-time" data-utc="{{ page.last_synced_at.strftime('%Y-%m-%dT%H:%M:%S') }}Z">{{ page.last_synced_at.strftime('%b %d, %Y %H:%M') }} UTC</span>
+        </p>
+        {% else %}
+        <p class="text-xs text-gray-400 mb-4">
+            <i class="fas fa-sync-alt mr-1"></i> Never synced
+        </p>
+        {% endif %}
+
+        <!-- Action buttons -->
+        <div class="border-t pt-3 space-y-2">
+            {% if page.status == 'connected' %}
+            <div class="flex items-center gap-2">
+                <button data-page-id="{{ page.id }}" data-platform="{{ page.platform }}" data-page-name="{{ page.page_name }}"
+                        onclick="triggerSync(Number(this.dataset.pageId), this.dataset.platform, this.dataset.pageName)"
+                        class="flex-1 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center justify-center gap-1">
+                    <i class="fas fa-sync-alt"></i> Sync Now
+                </button>
+                <form method="POST" action="{{ url_for('pages.disconnect', page_id=page.id) }}" class="flex-1"
+                      onsubmit="return false;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button"
+                            class="w-full px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition inline-flex items-center justify-center gap-1"
+                            onclick="confirmFormSubmit(this.closest('form'), {title:'Disconnect Page', message:'Disconnect {{ page.page_name }}?', confirmText:'Disconnect', type:'warning'})">
+                        <i class="fas fa-unlink"></i> Disconnect
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+            <div class="flex items-center gap-2">
+                <form method="POST" action="{{ url_for('pages.clear_data', page_id=page.id) }}" class="flex-1"
+                      onsubmit="return false;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button"
+                            class="w-full px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100 transition inline-flex items-center justify-center gap-1"
+                            onclick="confirmFormSubmit(this.closest('form'), {title:'Clear Data', message:'Clear all data for {{ page.page_name }}? This will delete all posts, comments, and contacts but keep the page connected.', confirmText:'Clear Data', type:'danger'})">
+                        <i class="fas fa-eraser"></i> Clear Data
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('pages.remove', page_id=page.id) }}" class="flex-1"
+                      onsubmit="return false;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="button"
+                            class="w-full px-3 py-1.5 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100 transition inline-flex items-center justify-center gap-1"
+                            onclick="confirmFormSubmit(this.closest('form'), {title:'Remove Page', message:'Remove {{ page.page_name }}? This will delete all associated posts, comments, and contacts.', confirmText:'Remove', type:'danger'})">
+                        <i class="fas fa-trash-alt"></i> Remove
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+{% with icon='plug', title='No connected pages', message='Connect your social media pages to start monitoring posts and comments.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}
+
+<!-- API Keys Section -->
+<div class="mt-10">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">API Keys by Platform</h3>
+    <div class="bg-white rounded-xl shadow-sm border">
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[400px]">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left font-medium text-gray-500">Platform</th>
+                    <th class="px-6 py-3 text-left font-medium text-gray-500">Status</th>
+                    <th class="px-6 py-3 text-left font-medium text-gray-500">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for p in platforms %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-6 py-3">
+                        <div class="flex items-center gap-2">
+                            <i class="fab fa-{{ p }}
+                                {% if p == 'facebook' %}text-blue-600
+                                {% elif p == 'instagram' %}text-pink-500
+                                {% elif p == 'youtube' %}text-red-600
+                                {% elif p == 'linkedin' %}text-blue-700
+                                {% elif p == 'twitter' %}text-gray-800
+                                {% else %}text-gray-500{% endif %}"></i>
+                            <span class="font-medium text-gray-800">{{ platform_labels.get(p, p) }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-3">
+                        {% if api_keys.get(p) %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700">
+                            <i class="fas fa-check-circle mr-1"></i> Configured
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">
+                            <i class="fas fa-minus-circle mr-1"></i> Not configured
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-3">
+                        {% if current_user.company_id %}
+                        <a href="{{ url_for('admin.company_api_keys', company_id=current_user.company_id) }}"
+                           class="text-indigo-600 hover:underline text-xs font-medium">Configure</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<!-- Connect Page Modal -->
+<div id="connectModal" class="fixed inset-0 z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40" onclick="closeModal('connectModal')"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">Connect a Page</h3>
+                <button onclick="closeModal('connectModal')" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+
+                <!-- OAuth Platforms -->
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Sign in with OAuth</p>
+                <div class="space-y-2 mb-5">
+                    <a href="{{ url_for('pages.connect_facebook') }}"
+                       class="flex items-center gap-3 w-full px-4 py-3 border rounded-lg text-sm font-medium hover:bg-blue-50 hover:border-blue-300 transition">
+                        <i class="fab fa-facebook-f text-blue-600 text-lg w-6 text-center"></i>
+                        <span class="text-gray-700">Connect with Facebook</span>
+                        <i class="fas fa-external-link-alt text-gray-300 ml-auto text-xs"></i>
+                    </a>
+                    <a href="{{ url_for('pages.connect_instagram') }}"
+                       class="flex items-center gap-3 w-full px-4 py-3 border rounded-lg text-sm font-medium hover:bg-pink-50 hover:border-pink-300 transition">
+                        <i class="fab fa-instagram text-pink-500 text-lg w-6 text-center"></i>
+                        <span class="text-gray-700">Connect with Instagram</span>
+                        <i class="fas fa-external-link-alt text-gray-300 ml-auto text-xs"></i>
+                    </a>
+                    <a href="{{ url_for('pages.connect_linkedin') }}"
+                       class="flex items-center gap-3 w-full px-4 py-3 border rounded-lg text-sm font-medium hover:bg-sky-50 hover:border-sky-300 transition">
+                        <i class="fab fa-linkedin-in text-blue-700 text-lg w-6 text-center"></i>
+                        <span class="text-gray-700">Connect with LinkedIn</span>
+                        <i class="fas fa-external-link-alt text-gray-300 ml-auto text-xs"></i>
+                    </a>
+                </div>
+
+                <!-- Manual Connect (other platforms) -->
+                <div class="border-t pt-4">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manual Connect</p>
+                    <form method="POST" action="{{ url_for('pages.connect') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <select name="platform" id="manualPlatformSelect" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                    onchange="updateManualConnectHints()">
+                                <option value="" disabled selected>Select platform</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="twitter">X / Twitter</option>
+                                <option value="google_reviews">Google Reviews</option>
+                            </select>
+                        </div>
+                        <div id="ytApiKeyHint" class="hidden mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-xs text-red-700">
+                                <i class="fas fa-key mr-1"></i>
+                                <strong>Requires YouTube Data API key.</strong>
+                                {% if api_keys.get('youtube') %}
+                                <span class="text-emerald-700"><i class="fas fa-check-circle ml-1"></i> API key configured</span>
+                                {% else %}
+                                <a href="{{ url_for('admin.company_api_keys', company_id=current_user.company_id) }}" class="underline">Configure it first</a>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" name="page_id" id="manualPageId" required placeholder="Page / Channel ID"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            <p id="pageIdHelp" class="text-xs text-gray-400 mt-1 hidden"></p>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" name="page_name" placeholder="Display name (optional)"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        </div>
+                        <button type="submit"
+                                class="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition text-sm">
+                            <i class="fas fa-plug mr-2"></i> Connect
+                        </button>
+                    </form>
+                </div>
+
+                <script>
+                function updateManualConnectHints() {
+                    const platform = document.getElementById('manualPlatformSelect').value;
+                    const ytHint = document.getElementById('ytApiKeyHint');
+                    const pageIdInput = document.getElementById('manualPageId');
+                    const pageIdHelp = document.getElementById('pageIdHelp');
+
+                    if (platform === 'youtube') {
+                        ytHint.classList.remove('hidden');
+                        pageIdInput.placeholder = 'Channel ID (e.g. UCxxxxxx) or @handle';
+                        pageIdHelp.textContent = 'Find your Channel ID at YouTube Studio > Settings > Channel > Advanced settings';
+                        pageIdHelp.classList.remove('hidden');
+                    } else {
+                        ytHint.classList.add('hidden');
+                        pageIdInput.placeholder = 'Page / Channel ID';
+                        pageIdHelp.classList.add('hidden');
+                    }
+                }
+                </script>
+
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Sync Modal — contains sequential panels -->
+<div id="syncModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+
+            <!-- Panel 0: YouTube Sync Options -->
+            <div id="ytOptionPanel" class="hidden flex-col">
+                <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                            <i class="fab fa-youtube text-red-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Sync YouTube Videos</h3>
+                            <p class="text-xs text-gray-500">Choose how you want to sync videos</p>
+                        </div>
+                    </div>
+                    <button onclick="closeSyncModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-6 space-y-3">
+                    <button onclick="startYTGetAllVideos()"
+                            class="w-full flex items-center gap-4 p-4 border rounded-xl hover:bg-blue-50 hover:border-blue-300 transition text-left group">
+                        <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-download text-blue-600 text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-gray-800">Get All Videos</p>
+                            <p class="text-sm text-gray-500">Sync all videos and comments from this channel</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300 ml-auto group-hover:text-blue-400 transition"></i>
+                    </button>
+                    <button onclick="openYouTubeSearchPanel()"
+                            class="w-full flex items-center gap-4 p-4 border rounded-xl hover:bg-amber-50 hover:border-amber-300 transition text-left group">
+                        <div class="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-search text-amber-600 text-xl"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-gray-800">Search Videos</p>
+                            <p class="text-sm text-gray-500">Search by keyword and select specific videos to sync</p>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300 ml-auto group-hover:text-amber-400 transition"></i>
+                    </button>
+                </div>
+                <div class="pb-5 flex justify-center">
+                    <button onclick="closeSyncModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel 1: YouTube Keyword Search -->
+            <div id="ytSearchPanel" class="hidden flex-col">
+                <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                            <i class="fab fa-youtube text-red-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Search Channel Videos</h3>
+                            <p class="text-xs text-gray-500">Enter a keyword to find matching videos</p>
+                        </div>
+                    </div>
+                    <button onclick="closeSyncModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-8 flex flex-col items-center gap-4">
+                    <div class="w-full max-w-md">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Keyword</label>
+                        <input type="text" id="ytKeywordInput"
+                               placeholder="e.g. product review, tutorial, Q&A..."
+                               class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                               onkeydown="if(event.key==='Enter') searchYouTubeVideos()">
+                        <p class="text-xs text-gray-400 mt-1.5">Searches within this channel's videos using the YouTube Data API.</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full max-w-md">
+                        <button id="ytSearchBtn" onclick="searchYouTubeVideos()"
+                                class="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center justify-center gap-2">
+                            <i class="fas fa-search"></i> Search Videos
+                        </button>
+                        <button onclick="closeSyncModal()"
+                                class="px-4 py-2.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Video Selection -->
+            <div id="ytSelectionPanel" class="hidden flex-col flex-1 min-h-0">
+                <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <i class="fas fa-list text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Select Videos to Extract</h3>
+                            <p class="text-xs text-gray-500" id="ytSelectionSubtitle">0 videos found</p>
+                        </div>
+                    </div>
+                    <button onclick="closeSyncModal()" class="text-gray-400 hover:text-gray-600 transition">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <!-- Select All row -->
+                <div class="px-6 py-2.5 border-b bg-gray-50 flex-shrink-0">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="ytSelectAll" onchange="toggleSelectAll(this)"
+                               class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <span class="text-sm font-medium text-gray-700">Select All</span>
+                    </label>
+                </div>
+                <!-- Scrollable video list -->
+                <div class="flex-1 overflow-y-auto px-6 py-3 min-h-0" id="ytVideoList"></div>
+                <!-- Footer -->
+                <div class="px-6 py-4 border-t bg-gray-50 rounded-b-xl flex-shrink-0">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm text-gray-600" id="ytSelectedCount">0 selected</span>
+                            <button onclick="openYouTubeSearchPanel()"
+                                    class="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1">
+                                <i class="fas fa-arrow-left text-xs"></i> Back
+                            </button>
+                        </div>
+                        <button id="ytExtractBtn" onclick="startExtract()" disabled
+                                class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-2">
+                            <i class="fas fa-download"></i> Extract Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Sync Progress (existing UI) -->
+            <div id="syncProgressPanel" class="hidden flex-col flex-1 min-h-0">
+                <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
+                    <div class="flex items-center gap-3">
+                        <div id="syncHeaderIcon" class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <i class="fas fa-sync-alt text-indigo-600 animate-spin"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800" id="syncTitle">Syncing...</h3>
+                            <p class="text-xs text-gray-500" id="syncSubtitle">Fetching videos and comments</p>
+                        </div>
+                    </div>
+                    <button id="syncCloseBtn" onclick="closeSyncModal()" class="text-gray-400 hover:text-gray-600 transition hidden">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="px-6 pt-4 flex-shrink-0">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-medium text-gray-600" id="syncProgressText">Starting sync...</span>
+                        <span class="text-xs font-medium text-indigo-600" id="syncProgressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="syncProgressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto px-6 py-3 min-h-0" id="syncVideoList"></div>
+                <div id="syncFooter" class="px-6 py-4 border-t bg-gray-50 rounded-b-xl flex-shrink-0 hidden">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-6">
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-gray-800" id="statVideos">0</p>
+                                <p class="text-xs text-gray-500">Videos</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-gray-800" id="statComments">0</p>
+                                <p class="text-xs text-gray-500">Comments</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-xl font-bold text-gray-800" id="statContacts">0</p>
+                                <p class="text-xs text-gray-500">Contacts</p>
+                            </div>
+                        </div>
+                        <button onclick="closeSyncModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                            Done
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pages.js') }}"></script>
+{% endblock %}

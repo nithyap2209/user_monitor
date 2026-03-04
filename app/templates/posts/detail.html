@@ -1,0 +1,493 @@
+{% extends 'base.html' %}
+{% block title %}Post Detail — User Monitor{% endblock %}
+
+{% block content %}
+<!-- Back link -->
+<div class="mb-6">
+    <a href="{{ url_for('posts.index') }}" class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition">
+        <i class="fas fa-arrow-left text-xs"></i> Back to Posts
+    </a>
+</div>
+
+<!-- Post Card -->
+<div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <!-- Post header: platform + page + date -->
+    <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+            <i class="fab fa-{{ post.platform }} text-lg
+                {% if post.platform == 'facebook' %}text-blue-600
+                {% elif post.platform == 'instagram' %}text-pink-500
+                {% elif post.platform == 'youtube' %}text-red-600
+                {% elif post.platform == 'linkedin' %}text-blue-700
+                {% elif post.platform == 'twitter' %}text-gray-800
+                {% else %}text-gray-500{% endif %}"></i>
+        </div>
+        <div class="flex-1">
+            <p class="text-sm font-medium text-gray-800">{{ post.connected_page.page_name if post.connected_page else post.platform }}</p>
+            <p class="text-xs text-gray-500">
+                {% if post.posted_at %}
+                {{ post.posted_at.strftime('%b %d, %Y at %H:%M') }}
+                {% endif %}
+            </p>
+        </div>
+        {% if post.permalink %}
+        <a href="{{ post.permalink }}" target="_blank" rel="noopener noreferrer"
+           class="text-gray-400 hover:text-indigo-600 transition" title="View original post">
+            <i class="fas fa-external-link-alt"></i>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Caption -->
+    {% if post.caption %}
+    <p class="text-gray-700 mb-4 whitespace-pre-line">{{ post.caption }}</p>
+    {% else %}
+    <p class="text-gray-400 italic mb-4">(No caption)</p>
+    {% endif %}
+
+    <!-- Post Media -->
+    {% if post.media_url %}
+    <div class="mb-4">
+        <img src="{{ post.media_url }}" alt="Post media" class="rounded-lg max-h-96 object-contain bg-gray-50 border">
+    </div>
+    {% endif %}
+
+    <!-- Engagement Stats Row -->
+    <div class="flex flex-wrap items-center gap-6 text-sm text-gray-500 border-t pt-4">
+        <span class="inline-flex items-center gap-1">
+            <i class="fas fa-heart text-rose-400"></i> {{ post.likes_count | default(0) }} likes
+        </span>
+        <span class="inline-flex items-center gap-1">
+            <i class="fas fa-comment text-blue-400"></i> {{ post.comments_count | default(0) }} comments
+        </span>
+        <span class="inline-flex items-center gap-1">
+            <i class="fas fa-share text-emerald-400"></i> {{ post.shares_count | default(0) }} shares
+        </span>
+        <span class="inline-flex items-center gap-1">
+            <i class="fas fa-play text-indigo-400"></i> {{ post.views | default(0) }} views
+        </span>
+        <span class="inline-flex items-center gap-1">
+            <i class="fas fa-signal text-indigo-400"></i> {{ post.reach | default(0) }} reach
+        </span>
+    </div>
+</div>
+
+<!-- Likes Section -->
+{% if reactions or post.likes_count > 0 %}
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <h3 class="text-sm font-semibold text-gray-700 mb-3">
+        <i class="fas fa-heart text-rose-500 mr-1"></i> Likes ({{ post.likes_count | default(0) }})
+    </h3>
+
+    {% if reaction_summary %}
+    <!-- Scrollable List of Reactors -->
+    <div class="max-h-72 overflow-y-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b sticky top-0">
+                <tr>
+                    <th class="px-3 py-2 text-left font-medium text-gray-500 w-10"></th>
+                    <th class="px-3 py-2 text-left font-medium text-gray-500">User Name</th>
+                    <th class="px-3 py-2 text-left font-medium text-gray-500">User ID</th>
+                    <th class="px-3 py-2 text-center font-medium text-gray-500 w-20">Reaction</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for r in reactions %}
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-3 py-2">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold
+                            {% if r.reaction_type == 'LIKE' %}bg-blue-100 text-blue-600
+                            {% elif r.reaction_type == 'LOVE' %}bg-rose-100 text-rose-600
+                            {% elif r.reaction_type == 'HAHA' %}bg-amber-100 text-amber-600
+                            {% elif r.reaction_type == 'WOW' %}bg-indigo-100 text-indigo-600
+                            {% elif r.reaction_type == 'SAD' %}bg-indigo-100 text-indigo-600
+                            {% elif r.reaction_type == 'ANGRY' %}bg-red-100 text-red-600
+                            {% else %}bg-gray-200 text-gray-600{% endif %}">
+                            {{ (r.user_name or '?')[0] | upper }}
+                        </div>
+                    </td>
+                    <td class="px-3 py-2">
+                        {% if r.user_name and r.user_name != 'Unknown' %}
+                        <a href="{{ url_for('comments.author_profile', author_name=r.user_name) }}"
+                           class="text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition truncate">
+                            {{ r.user_name }}
+                        </a>
+                        {% else %}
+                        <span class="text-sm text-gray-500">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                        <span class="text-xs text-gray-500 font-mono">{{ r.platform_user_id or '—' }}</span>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                        {% if r.reaction_type == 'LIKE' %}<i class="fas fa-thumbs-up text-blue-400"></i>
+                        {% elif r.reaction_type == 'LOVE' %}<i class="fas fa-heart text-rose-400"></i>
+                        {% elif r.reaction_type == 'HAHA' %}<i class="fas fa-laugh text-amber-400"></i>
+                        {% elif r.reaction_type == 'WOW' %}<i class="fas fa-surprise text-indigo-400"></i>
+                        {% elif r.reaction_type == 'SAD' %}<i class="fas fa-sad-tear text-indigo-400"></i>
+                        {% elif r.reaction_type == 'ANGRY' %}<i class="fas fa-angry text-red-400"></i>
+                        {% else %}<i class="fas fa-thumbs-up text-gray-400"></i>{% endif %}
+                        <span class="text-xs text-gray-500 ml-1">{{ r.reaction_type | lower | capitalize }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <!-- Aggregate likes display -->
+    <div class="flex items-center gap-4 p-4 bg-rose-50/50 rounded-lg border border-rose-100">
+        <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-heart text-rose-500 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-2xl font-bold text-gray-800">{{ post.likes_count | default(0) }}</p>
+            <p class="text-sm text-gray-500">people liked this post</p>
+        </div>
+    </div>
+    {% if post.platform != 'facebook' %}
+    <p class="text-xs text-gray-400 mt-2 ml-1">
+        <i class="fas fa-info-circle mr-1"></i>
+        Individual reactor names not available for {{ post.platform | capitalize }}
+    </p>
+    {% endif %}
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Mini Analytics / Post Stats -->
+{% if post_stats %}
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <h3 class="text-sm font-semibold text-gray-700 mb-3">Comment Analytics</h3>
+    <div class="flex flex-wrap items-center gap-3">
+        <button type="button" onclick="filterComments('all')" data-filter="all"
+                class="comment-filter-btn active inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border text-sm hover:bg-gray-100 transition focus:outline-none">
+            <i class="fas fa-comments text-gray-500"></i>
+            <span class="font-medium text-gray-700">{{ post_stats.total_comments }}</span>
+            <span class="text-gray-500">total</span>
+        </button>
+        <button type="button" onclick="filterComments('positive')" data-filter="positive"
+                class="comment-filter-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-sm hover:bg-emerald-100 transition focus:outline-none">
+            <i class="fas fa-smile text-emerald-500"></i>
+            <span class="font-medium text-emerald-700">{{ post_stats.positive }}</span>
+            <span class="text-emerald-600">positive</span>
+        </button>
+        <button type="button" onclick="filterComments('negative')" data-filter="negative"
+                class="comment-filter-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-sm hover:bg-rose-100 transition focus:outline-none">
+            <i class="fas fa-frown text-rose-500"></i>
+            <span class="font-medium text-rose-700">{{ post_stats.negative }}</span>
+            <span class="text-rose-600">negative</span>
+        </button>
+        <button type="button" onclick="filterComments('neutral')" data-filter="neutral"
+                class="comment-filter-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-50 border text-sm hover:bg-gray-100 transition focus:outline-none">
+            <i class="fas fa-meh text-gray-400"></i>
+            <span class="font-medium text-gray-700">{{ post_stats.neutral }}</span>
+            <span class="text-gray-500">neutral</span>
+        </button>
+        <button type="button" onclick="filterComments('lead')" data-filter="lead"
+                class="comment-filter-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-sm hover:bg-blue-100 transition focus:outline-none">
+            <i class="fas fa-user-plus text-blue-500"></i>
+            <span class="font-medium text-blue-700">{{ post_stats.leads }}</span>
+            <span class="text-blue-600">leads</span>
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Page Owner Activity -->
+{% if page_owner_reaction or page_owner_comments %}
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <div class="flex items-center gap-2 mb-4">
+        <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-user-shield text-indigo-600 text-sm"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-gray-700">Page Owner Activity</h3>
+        {% if page_name %}
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <i class="fas fa-check-circle text-indigo-500"></i> {{ page_name }}
+        </span>
+        {% endif %}
+    </div>
+
+    {% if page_owner_reaction %}
+    <div class="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-lg">
+        <i class="fas fa-thumbs-up text-blue-500"></i>
+        <span class="text-sm text-gray-700">
+            Page owner
+            {% if page_owner_reaction.reaction_type and page_owner_reaction.reaction_type != 'LIKE' %}
+            reacted with
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                {% if page_owner_reaction.reaction_type == 'LOVE' %}bg-rose-100 text-rose-700
+                {% elif page_owner_reaction.reaction_type == 'HAHA' %}bg-amber-100 text-amber-700
+                {% elif page_owner_reaction.reaction_type == 'WOW' %}bg-indigo-100 text-indigo-700
+                {% elif page_owner_reaction.reaction_type == 'SAD' %}bg-indigo-100 text-indigo-700
+                {% elif page_owner_reaction.reaction_type == 'ANGRY' %}bg-red-100 text-red-700
+                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                {% if page_owner_reaction.reaction_type == 'LOVE' %}<i class="fas fa-heart"></i>
+                {% elif page_owner_reaction.reaction_type == 'HAHA' %}<i class="fas fa-laugh"></i>
+                {% elif page_owner_reaction.reaction_type == 'WOW' %}<i class="fas fa-surprise"></i>
+                {% elif page_owner_reaction.reaction_type == 'SAD' %}<i class="fas fa-sad-tear"></i>
+                {% elif page_owner_reaction.reaction_type == 'ANGRY' %}<i class="fas fa-angry"></i>
+                {% endif %}
+                {{ page_owner_reaction.reaction_type | lower | capitalize }}
+            </span>
+            {% else %}
+            liked this post
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+
+    {% if page_owner_comments %}
+    <div class="space-y-2">
+        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Page Owner Comments ({{ page_owner_comments | length }})</p>
+        {% for c in page_owner_comments %}
+        <div class="flex items-start gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+            <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <i class="fas fa-store text-white text-xs"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-700">{{ c.comment_text }}</p>
+                <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                    {% if c.commented_at %}
+                    <span><i class="fas fa-clock mr-1"></i>{{ c.commented_at.strftime('%b %d, %Y %H:%M') }}</span>
+                    {% endif %}
+                    {% if c.likes_count %}
+                    <span><i class="fas fa-thumbs-up mr-1"></i>{{ c.likes_count }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Comments Section -->
+<div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold text-gray-800">
+        Comments
+        <span id="commentCountBadge" class="text-base font-normal text-gray-500">({{ comments | length }})</span>
+    </h3>
+    <span id="activeFilterLabel" class="hidden text-xs font-medium px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200"></span>
+</div>
+
+{% if comments %}
+<div class="space-y-3" id="commentsContainer">
+    {% for comment in comments %}
+    <div class="bg-white rounded-xl shadow-sm border p-4 comment-card" id="comment-{{ comment.id }}"
+         data-sentiment="{{ comment.sentiment or 'neutral' }}">
+        <div class="flex items-start gap-3">
+            <!-- Author avatar initial -->
+            <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold
+                {% if comment.sentiment == 'positive' %}bg-emerald-100 text-emerald-700
+                {% elif comment.sentiment == 'negative' %}bg-rose-100 text-rose-700
+                {% elif comment.sentiment == 'lead' %}bg-blue-100 text-blue-700
+                {% else %}bg-gray-200 text-gray-600{% endif %}">
+                {{ (comment.display_name or '?')[0] | upper }}
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <!-- Author + sentiment badge row -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    {% if comment.display_name and comment.display_name != 'Unknown' %}
+                    <a href="{{ url_for('comments.author_profile', author_name=comment.display_name) }}"
+                       class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition">
+                        {{ comment.display_name }}
+                    </a>
+                    {% else %}
+                    <span class="text-sm font-medium text-gray-500">Unknown</span>
+                    {% endif %}
+                    {% if comment.platform_author_id %}
+                    {% set _cpurl = profile_url(post.platform, comment.platform_author_id, comment.author_name) %}
+                    {% if _cpurl %}
+                    <a href="{{ _cpurl }}" target="_blank" rel="noopener noreferrer"
+                       class="text-[10px] text-gray-400 font-mono hover:text-indigo-600 transition inline-flex items-center gap-0.5"
+                       title="View profile on {{ post.platform }}">
+                        ID: {{ comment.platform_author_id }} <i class="fas fa-external-link-alt text-[7px]"></i>
+                    </a>
+                    {% else %}
+                    <span class="text-[10px] text-gray-400 font-mono">ID: {{ comment.platform_author_id }}</span>
+                    {% endif %}
+                    {% endif %}
+                    {% if comment.sentiment %}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                        bg-{{ comment.sentiment_color }}-100 text-{{ comment.sentiment_color }}-700">
+                        {{ comment.sentiment | capitalize }}
+                    </span>
+                    {% endif %}
+                    {% if comment.is_flagged %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        <i class="fas fa-flag mr-0.5"></i> Flagged
+                    </span>
+                    {% endif %}
+                    {% if comment.has_contact_info %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        <i class="fas fa-address-card mr-0.5"></i> Contact
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Comment text -->
+                <p class="text-sm text-gray-600 mt-1">{{ comment.comment_text }}</p>
+
+                <!-- Date + likes -->
+                <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                    {% if comment.commented_at %}
+                    <span><i class="fas fa-clock mr-1"></i>{{ comment.commented_at.strftime('%b %d, %Y %H:%M') }}</span>
+                    {% endif %}
+                    {% if comment.likes_count is defined %}
+                    <span><i class="fas fa-thumbs-up mr-1"></i>{{ comment.likes_count or 0 }}</span>
+                    {% endif %}
+                    {% if comment.is_replied %}
+                    <span class="text-emerald-500"><i class="fas fa-check-circle mr-1"></i>Replied</span>
+                    {% endif %}
+                </div>
+
+                <!-- Action buttons (permission-gated) -->
+                {% if current_user.has_permission('comments', 'reply') %}
+                <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+                    <a href="{{ url_for('comments.index', post_id=post.id) }}#comment-{{ comment.id }}"
+                       class="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-reply"></i> Reply
+                    </a>
+                    <button type="button" onclick="flagComment({{ comment.id }})"
+                            data-action="flag"
+                            data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-flag"></i> {{ 'Unflag' if comment.is_flagged else 'Flag' }}
+                    </button>
+                    <button type="button" onclick="hideComment({{ comment.id }})"
+                            data-action="hide"
+                            data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-eye-slash"></i> {{ 'Unhide' if comment.is_hidden else 'Hide' }}
+                    </button>
+                    <button type="button" onclick="deleteComment({{ comment.id }})"
+                            data-action="delete"
+                            data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<p id="noFilterResults" class="hidden text-center text-sm text-gray-400 py-8">No comments match this filter.</p>
+{% else %}
+{% with icon='comments', title='No comments', message='No comments have been synced for this post yet.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Comment Analytics filter
+function filterComments(filter) {
+    var cards = document.querySelectorAll('.comment-card');
+    var shown = 0;
+
+    cards.forEach(function(card) {
+        var sentiment = card.dataset.sentiment || 'neutral';
+        var visible = (filter === 'all' || sentiment === filter);
+        card.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+    });
+
+    // Update heading count
+    var badge = document.getElementById('commentCountBadge');
+    if (badge) badge.textContent = '(' + shown + ')';
+
+    // Show/hide "no results" message
+    var noResults = document.getElementById('noFilterResults');
+    if (noResults) noResults.classList.toggle('hidden', shown > 0);
+
+    // Update active filter label
+    var label = document.getElementById('activeFilterLabel');
+    if (label) {
+        if (filter === 'all') {
+            label.classList.add('hidden');
+        } else {
+            label.textContent = filter.charAt(0).toUpperCase() + filter.slice(1) + ' only';
+            label.classList.remove('hidden');
+        }
+    }
+
+    // Highlight active filter button
+    document.querySelectorAll('.comment-filter-btn').forEach(function(btn) {
+        var isActive = btn.dataset.filter === filter;
+        btn.classList.toggle('ring-2', isActive);
+        btn.classList.toggle('ring-indigo-400', isActive);
+        btn.classList.toggle('ring-offset-1', isActive);
+    });
+}
+
+async function replyComment(commentId, authorName) {
+    const text = await showReplyModal({ authorName: authorName || null });
+    if (!text) return;
+    const btn = document.querySelector(`[data-action="reply"][data-comment-id="${commentId}"]`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+    const data = await apiCall(`/api/comments/${commentId}/reply`, 'POST', { reply: text });
+    if (data.success) {
+        showToast(data.message || 'Reply sent.', 'success');
+        setTimeout(() => location.reload(), 1000);
+    } else {
+        showToast(data.error || 'Failed to reply.', 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-reply"></i> Reply'; }
+    }
+}
+
+async function flagComment(commentId) {
+    const btn = document.querySelector(`[data-action="flag"][data-comment-id="${commentId}"]`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    const data = await apiCall(`/api/comments/${commentId}/flag`, 'POST');
+    if (data.success) {
+        showToast(data.flagged ? 'Comment flagged.' : 'Comment unflagged.', 'info');
+        setTimeout(() => location.reload(), 800);
+    } else {
+        showToast(data.error || 'Failed.', 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-flag"></i> Flag'; }
+    }
+}
+
+async function hideComment(commentId) {
+    const btn = document.querySelector(`[data-action="hide"][data-comment-id="${commentId}"]`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    const data = await apiCall(`/api/comments/${commentId}/hide`, 'POST');
+    if (data.success) {
+        showToast(data.hidden ? 'Comment hidden.' : 'Comment visible.', 'info');
+        setTimeout(() => location.reload(), 800);
+    } else {
+        showToast(data.error || 'Failed.', 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide'; }
+    }
+}
+
+async function deleteComment(commentId) {
+    var ok = await showConfirm({
+        title: 'Delete Comment',
+        message: 'Delete this comment? This cannot be undone.',
+        confirmText: 'Delete',
+        type: 'danger',
+    });
+    if (!ok) return;
+    const btn = document.querySelector(`[data-action="delete"][data-comment-id="${commentId}"]`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+    const data = await apiCall(`/api/comments/${commentId}/delete`, 'DELETE');
+    if (data.success) {
+        showToast('Comment deleted.', 'success');
+        const card = document.getElementById(`comment-${commentId}`);
+        if (card) card.remove();
+    } else {
+        showToast(data.error || 'Failed to delete.', 'danger');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-trash"></i> Delete'; }
+    }
+}
+</script>
+{% endblock %}

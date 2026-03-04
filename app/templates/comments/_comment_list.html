@@ -1,0 +1,163 @@
+{# Partial template for AJAX-loaded comment list. No layout/base — standalone fragment. #}
+
+{% if comments %}
+<div class="space-y-3">
+    {% for comment in comments %}
+    <div class="bg-white rounded-xl shadow-sm border p-4" id="comment-{{ comment.id }}">
+        <div class="flex items-start gap-3">
+            <!-- Author Avatar -->
+            <div class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold
+                {% if comment.sentiment == 'positive' %}bg-emerald-100 text-emerald-700
+                {% elif comment.sentiment == 'negative' %}bg-rose-100 text-rose-700
+                {% elif comment.sentiment == 'lead' %}bg-blue-100 text-blue-700
+                {% elif comment.sentiment == 'business' %}bg-indigo-100 text-indigo-700
+                {% else %}bg-gray-200 text-gray-600{% endif %}">
+                {{ (comment.display_name or '?')[0] | upper }}
+            </div>
+
+            <div class="flex-1 min-w-0">
+                <!-- Author + badges row -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    {% if comment.display_name and comment.display_name != 'Unknown' %}
+                    <a href="{{ url_for('comments.author_profile', author_name=comment.display_name) }}"
+                       class="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition">
+                        {{ comment.display_name }}
+                    </a>
+                    {% else %}
+                    <span class="text-sm font-medium text-gray-800">Unknown</span>
+                    {% endif %}
+                    {% if comment.platform_author_id %}
+                    <span class="text-[10px] text-gray-400 font-mono">ID: {{ comment.platform_author_id }}</span>
+                    {% endif %}
+
+                    <!-- Platform badge (links to social profile) -->
+                    {% set _purl = profile_url(comment.platform, comment.platform_author_id, comment.author_name) %}
+                    {% if _purl %}
+                    <a href="{{ _purl }}" target="_blank" rel="noopener noreferrer"
+                       class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition inline-flex items-center gap-0.5"
+                       title="View profile on {{ comment.platform }}">
+                        <i class="fab fa-{{ comment.platform }} mr-0.5"></i> {{ comment.platform }}
+                        <i class="fas fa-external-link-alt text-[8px] ml-0.5"></i>
+                    </a>
+                    {% else %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                        <i class="fab fa-{{ comment.platform }} mr-0.5"></i> {{ comment.platform }}
+                    </span>
+                    {% endif %}
+
+                    <!-- Date -->
+                    {% if comment.commented_at %}
+                    <span class="text-xs text-gray-400">
+                        <i class="fas fa-clock mr-0.5"></i> {{ comment.commented_at.strftime('%b %d, %Y %H:%M') }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Comment text -->
+                <div class="comment-content">
+                    <p class="text-sm text-gray-600 mt-1.5">{{ comment.comment_text }}</p>
+                    {% if comment.translated_text %}
+                    <div class="translated-text mt-2 p-2 bg-indigo-50 rounded text-sm text-indigo-800 border border-indigo-200 relative">
+                        <button onclick="this.parentElement.remove()" class="absolute top-1 right-1 text-indigo-400 hover:text-indigo-700 p-0.5 leading-none" title="Dismiss">&times;</button>
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-language text-indigo-600"></i>
+                            {% if comment.detected_language and comment.detected_language != 'unknown' %}
+                            <span class="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                                Detected: {{ comment.detected_language | capitalize }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {{ comment.translated_text }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Badges row -->
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    {% if comment.sentiment %}
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                        bg-{{ comment.sentiment_color }}-100 text-{{ comment.sentiment_color }}-700">
+                        {{ comment.sentiment | capitalize }}
+                    </span>
+                    {% endif %}
+
+                    {% if comment.is_flagged %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium">
+                        <i class="fas fa-flag mr-0.5"></i> Flagged
+                    </span>
+                    {% endif %}
+
+                    {% if comment.has_contact_info %}
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                        <i class="fas fa-address-card mr-0.5"></i> Contact
+                    </span>
+                    {% endif %}
+
+                    {% if comment.is_replied %}
+                    <span class="text-xs text-emerald-500">
+                        <i class="fas fa-check-circle mr-0.5"></i> Replied
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+                    {% if has_permission('comments', 'reply') %}
+                    <button onclick="replyComment({{ comment.id }})"
+                            data-action="reply" data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-reply"></i> Reply
+                    </button>
+                    {% endif %}
+
+                    {% if has_permission('comments', 'translate') %}
+                    <select id="source-lang-{{ comment.id }}"
+                            class="source-lang-select px-1.5 py-1 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            title="Source language (use for transliterated text)">
+                        <option value="auto">Auto</option>
+                    </select>
+                    <span class="text-xs text-gray-400">&rarr;</span>
+                    <select id="target-lang-{{ comment.id }}"
+                            class="translate-lang-select px-1.5 py-1 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">To...</option>
+                    </select>
+                    <button onclick="translateComment({{ comment.id }})"
+                            id="translate-btn-{{ comment.id }}"
+                            data-action="translate" data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-language"></i> Translate
+                    </button>
+                    {% endif %}
+
+                    <button onclick="flagComment({{ comment.id }})"
+                            data-action="flag" data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-amber-600 bg-amber-50 rounded-lg hover:bg-amber-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-flag"></i> {{ 'Unflag' if comment.is_flagged else 'Flag' }}
+                    </button>
+
+                    <button onclick="hideComment({{ comment.id }})"
+                            data-action="hide" data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-eye-slash"></i> {{ 'Unhide' if comment.is_hidden else 'Hide' }}
+                    </button>
+
+                    {% if has_permission('comments', 'delete') %}
+                    <button onclick="deleteComment({{ comment.id }})"
+                            data-action="delete" data-comment-id="{{ comment.id }}"
+                            class="px-2.5 py-1 text-xs font-medium text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% include 'components/pagination.html' %}
+{% else %}
+{% with icon='comments', title='No comments found', message='Try adjusting your filters.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}

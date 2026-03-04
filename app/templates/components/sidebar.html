@@ -1,0 +1,123 @@
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-indigo-950 flex flex-col flex-shrink-0 h-full transform -translate-x-full transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-auto">
+    <!-- Logo -->
+    <div class="h-16 flex items-center px-6 border-b border-indigo-900/40 relative">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center mr-3 shadow-lg shadow-indigo-500/20">
+            <i class="fas fa-chart-line text-white text-sm"></i>
+        </div>
+        <span class="text-lg font-bold text-white tracking-wide">User Monitor</span>
+        <button id="sidebar-close" type="button" title="Close menu"
+                class="md:hidden absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-indigo-300 hover:text-white hover:bg-white/10 transition">
+            <i class="fas fa-times text-sm"></i>
+        </button>
+    </div>
+
+    <!-- Navigation links -->
+    <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+        {# Dashboard - always visible #}
+        <a href="{{ url_for('dashboard.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint.startswith('dashboard') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-tachometer-alt w-5 mr-3 text-center"></i>
+            Dashboard
+        </a>
+
+        {# Connected Pages #}
+        {% if current_user.has_permission('pages') %}
+        <a href="{{ url_for('pages.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint.startswith('pages') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-plug w-5 mr-3 text-center"></i>
+            Connected Pages
+        </a>
+        {% endif %}
+
+        {# Posts #}
+        {% if current_user.has_permission('posts') %}
+        <a href="{{ url_for('posts.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint.startswith('posts') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-newspaper w-5 mr-3 text-center"></i>
+            Posts
+        </a>
+        {% endif %}
+
+        {# Comments #}
+        {% if current_user.has_permission('comments') %}
+        <a href="{{ url_for('comments.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint in ('comments.index', 'comments.export') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-comments w-5 mr-3 text-center"></i>
+            Comments
+        </a>
+
+        {# Comment Inbox #}
+        <a href="{{ url_for('inbox.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint.startswith('inbox') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-inbox w-5 mr-3 text-center"></i>
+            Comment Inbox
+        </a>
+
+        {# User Monitor #}
+        <a href="{{ url_for('comments.user_monitor') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint in ('comments.user_monitor', 'comments.author_profile') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-user-secret w-5 mr-3 text-center"></i>
+            User Monitor
+        </a>
+        {% endif %}
+
+        {# Contacts #}
+        {% if current_user.has_permission('contacts') %}
+        <a href="{{ url_for('contacts.index') }}"
+           class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                  {% if request.endpoint and request.endpoint.startswith('contacts') %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+            <i class="fas fa-address-book w-5 mr-3 text-center"></i>
+            Contacts
+        </a>
+        {% endif %}
+
+        <!-- Admin section -->
+        {% if current_user.is_superadmin or current_user.has_permission('users') %}
+        <div class="pt-4 mt-4 border-t border-indigo-900/40">
+            <p class="px-3 text-xs font-semibold uppercase tracking-wider text-indigo-400/40 mb-2">Administration</p>
+
+            <a href="{{ url_for('admin.companies') }}"
+               class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                      {% if request.endpoint and request.endpoint == 'admin.companies' %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+                <i class="fas fa-building w-5 mr-3 text-center"></i>
+                Companies
+            </a>
+
+            <a href="{{ url_for('admin.users') }}"
+               class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                      {% if request.endpoint and request.endpoint == 'admin.users' %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+                <i class="fas fa-users w-5 mr-3 text-center"></i>
+                Users
+            </a>
+
+            <a href="{{ url_for('admin.designations') }}"
+               class="flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+                      {% if request.endpoint and request.endpoint == 'admin.designations' %}bg-white/10 text-white shadow-sm{% else %}text-indigo-200/60 hover:bg-white/5 hover:text-white{% endif %}">
+                <i class="fas fa-id-badge w-5 mr-3 text-center"></i>
+                Designations
+            </a>
+        </div>
+        {% endif %}
+
+    </nav>
+
+    <!-- User info at bottom -->
+    <div class="p-4 border-t border-indigo-900/40">
+        <div class="flex items-center">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow-lg shadow-indigo-500/20">
+                {{ current_user.initials }}
+            </div>
+            <div class="ml-3 flex-1 min-w-0">
+                <p class="text-sm font-medium text-white truncate">{{ current_user.full_name }}</p>
+                <p class="text-xs text-indigo-300/40 truncate">{{ current_user.email }}</p>
+            </div>
+        </div>
+    </div>
+</aside>

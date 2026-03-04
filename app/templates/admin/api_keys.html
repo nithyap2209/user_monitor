@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% block title %}API Keys — {{ company.name }} — User Monitor{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="{{ url_for('admin.companies') }}" class="text-sm text-indigo-600 hover:underline">&larr; Back to Companies</a>
+    <h2 class="text-2xl font-bold text-gray-800 mt-2">API Keys &mdash; {{ company.name }}</h2>
+    <p class="text-sm text-gray-500 mt-1">Configure platform API credentials for this company. Each platform requires specific fields.</p>
+</div>
+
+{# Platform-specific field config #}
+{% set platform_fields = {
+    'facebook': {
+        'access_token': {'label': 'Page Access Token', 'help': 'Long-lived page access token from Facebook Developer Console'},
+        'page_id': {'label': 'Page ID', 'help': 'Your Facebook Page ID (found in Page Settings > About)'},
+        'api_key': {'label': 'App ID', 'help': 'Facebook App ID from developers.facebook.com'},
+        'api_secret': {'label': 'App Secret', 'help': 'Facebook App Secret'},
+    },
+    'instagram': {
+        'access_token': {'label': 'Access Token', 'help': 'Instagram Graph API access token (requires Facebook login)'},
+        'page_id': {'label': 'Instagram Business Account ID', 'help': 'IG business account ID linked to your Facebook Page'},
+        'api_key': {'label': 'App ID', 'help': 'Facebook App ID (Instagram uses Facebook Graph API)'},
+        'api_secret': {'label': 'App Secret', 'help': 'Facebook App Secret'},
+    },
+    'youtube': {
+        'api_key': {'label': 'API Key', 'help': 'YouTube Data API v3 key from Google Cloud Console'},
+        'access_token': {'label': 'OAuth Access Token', 'help': 'Optional: needed for posting replies / write operations'},
+        'page_id': {'label': 'Channel ID', 'help': 'Your YouTube channel ID (starts with UC...)'},
+        'refresh_token': {'label': 'OAuth Refresh Token', 'help': 'Optional: for auto-refreshing the OAuth token'},
+    },
+    'linkedin': {
+        'access_token': {'label': 'Access Token', 'help': 'LinkedIn OAuth 2.0 access token'},
+        'page_id': {'label': 'Organization ID', 'help': 'Your LinkedIn Company/Organization page ID'},
+        'api_key': {'label': 'Client ID', 'help': 'LinkedIn App Client ID'},
+        'api_secret': {'label': 'Client Secret', 'help': 'LinkedIn App Client Secret'},
+    },
+    'twitter': {
+        'access_token': {'label': 'Bearer Token', 'help': 'Twitter API v2 Bearer Token from developer.twitter.com'},
+        'api_key': {'label': 'API Key (Consumer Key)', 'help': 'Twitter App API Key'},
+        'api_secret': {'label': 'API Secret (Consumer Secret)', 'help': 'Twitter App API Secret'},
+        'page_id': {'label': 'User ID', 'help': 'Your Twitter/X numeric user ID'},
+    },
+    'google_reviews': {
+        'access_token': {'label': 'OAuth Access Token', 'help': 'Google Business Profile API OAuth 2.0 token'},
+        'refresh_token': {'label': 'OAuth Refresh Token', 'help': 'For auto-refreshing the access token'},
+        'api_key': {'label': 'API Key', 'help': 'Optional: Google Cloud API key'},
+        'page_id': {'label': 'Location ID', 'help': 'Google Business location resource name'},
+    },
+} %}
+
+{% set platform_icons = {
+    'facebook': 'fa-facebook-f',
+    'instagram': 'fa-instagram',
+    'youtube': 'fa-youtube',
+    'linkedin': 'fa-linkedin-in',
+    'twitter': 'fa-x-twitter',
+    'google_reviews': 'fa-google',
+} %}
+
+{% set platform_colors = {
+    'facebook': 'text-blue-600 bg-blue-50',
+    'instagram': 'text-pink-600 bg-pink-50',
+    'youtube': 'text-red-600 bg-red-50',
+    'linkedin': 'text-blue-700 bg-sky-50',
+    'twitter': 'text-gray-800 bg-gray-100',
+    'google_reviews': 'text-blue-500 bg-blue-50',
+} %}
+
+<div class="space-y-4">
+    {% for p in platforms %}
+    {% set existing = keys | selectattr('platform', 'equalto', p) | list %}
+    {% set key = existing[0] if existing else None %}
+    {% set fields = platform_fields.get(p, {}) %}
+    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <!-- Collapsible Header -->
+        <button type="button"
+                onclick="toggleApiCard('apiCard_{{ loop.index }}')"
+                class="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg {{ platform_colors.get(p, 'text-gray-500 bg-gray-100') }} flex items-center justify-center">
+                    <i class="fab {{ platform_icons.get(p, 'fa-plug') }} text-lg"></i>
+                </div>
+                <div class="text-left">
+                    <h3 class="font-semibold text-gray-800">{{ platform_labels.get(p, p) }}</h3>
+                    {% if key %}
+                    <span class="text-xs text-green-600"><i class="fas fa-check-circle mr-1"></i> Configured</span>
+                    {% else %}
+                    <span class="text-xs text-gray-400"><i class="fas fa-minus-circle mr-1"></i> Not configured</span>
+                    {% endif %}
+                </div>
+            </div>
+            <i id="apiCard_{{ loop.index }}_icon" class="fas fa-chevron-down text-gray-400 transition-transform duration-200"></i>
+        </button>
+
+        <!-- Collapsible Body -->
+        <div id="apiCard_{{ loop.index }}" class="hidden border-t">
+            <form method="POST" action="{{ url_for('admin.save_api_key', company_id=company.id) }}" class="px-6 py-5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="platform" value="{{ p }}">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for field_name in ['access_token', 'refresh_token', 'api_key', 'api_secret', 'page_id'] %}
+                    {% set fconf = fields.get(field_name, {}) %}
+                    {% if fconf %}
+                    {% set field_id = 'f_' ~ loop.index ~ '_' ~ p ~ '_' ~ field_name %}
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">{{ fconf.get('label', field_name) }}</label>
+                        <div class="relative">
+                            <input type="password" name="{{ field_name }}" id="{{ field_id }}"
+                                   value="{{ key[field_name] or '' if key else '' }}"
+                                   class="w-full px-3 py-2 pr-16 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                   placeholder="{{ fconf.get('help', 'Enter ' + field_name) }}">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-1 gap-0.5">
+                                <button type="button" onclick="toggleFieldVisibility('{{ field_id }}')"
+                                        class="p-1.5 text-gray-400 hover:text-gray-600 transition rounded" title="Show / hide">
+                                    <i id="{{ field_id }}_eye" class="fas fa-eye text-xs"></i>
+                                </button>
+                                <button type="button" onclick="copyFieldValue('{{ field_id }}')"
+                                        class="p-1.5 text-gray-400 hover:text-gray-600 transition rounded" title="Copy to clipboard">
+                                    <i class="fas fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% if fconf.get('help') %}
+                        <p class="text-xs text-gray-400 mt-1">{{ fconf.get('help') }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="mt-4 flex items-center gap-3">
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                        <i class="fas fa-save mr-1"></i> Save Keys
+                    </button>
+                    {% if key %}
+                    <button type="button"
+                            onclick="testApiConnection({{ company.id }}, '{{ p }}', this)"
+                            class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                        <i class="fas fa-plug mr-1"></i> Test Connection
+                    </button>
+                    <span id="test-result-{{ p }}" class="text-sm"></span>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleFieldVisibility(fieldId) {
+        var input = document.getElementById(fieldId);
+        var icon = document.getElementById(fieldId + '_eye');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash text-xs';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye text-xs';
+        }
+    }
+
+    function copyFieldValue(fieldId) {
+        var input = document.getElementById(fieldId);
+        if (!input.value) {
+            showToast('Nothing to copy — field is empty.', 'warning');
+            return;
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(input.value).then(function() {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(function() {
+                _fallbackCopy(input);
+            });
+        } else {
+            _fallbackCopy(input);
+        }
+    }
+
+    function _fallbackCopy(input) {
+        var prev = input.type;
+        input.type = 'text';
+        input.select();
+        try {
+            document.execCommand('copy');
+            showToast('Copied!', 'success');
+        } catch (e) {
+            showToast('Copy failed — please copy manually.', 'danger');
+        }
+        input.type = prev;
+        window.getSelection().removeAllRanges();
+    }
+
+    function toggleApiCard(cardId) {
+        var body = document.getElementById(cardId);
+        var icon = document.getElementById(cardId + '_icon');
+        if (body.classList.contains('hidden')) {
+            body.classList.remove('hidden');
+            icon.classList.add('rotate-180');
+        } else {
+            body.classList.add('hidden');
+            icon.classList.remove('rotate-180');
+        }
+    }
+
+    async function testApiConnection(companyId, platform, btn) {
+        var resultSpan = document.getElementById('test-result-' + platform);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Testing...';
+        resultSpan.innerHTML = '';
+
+        try {
+            var data = await apiCall('/admin/companies/' + companyId + '/api-keys/test', 'POST', {platform: platform});
+
+            if (data.success) {
+                resultSpan.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i> Connected' +
+                    (data.name ? ' as <strong>' + data.name + '</strong>' : '') + '</span>';
+            } else {
+                resultSpan.innerHTML = '<span class="text-red-600"><i class="fas fa-times-circle mr-1"></i> ' +
+                    (data.error || 'Connection failed') + '</span>';
+            }
+        } catch (e) {
+            resultSpan.innerHTML = '<span class="text-red-600"><i class="fas fa-times-circle mr-1"></i> Network error</span>';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-plug mr-1"></i> Test Connection';
+        }
+    }
+</script>
+{% endblock %}

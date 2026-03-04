@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Posts — User Monitor{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Posts
+        <span class="text-lg font-medium text-gray-400 ml-2">({{ pagination.total }})</span>
+    </h2>
+    <p class="text-sm text-gray-500 mt-1">All synced posts across your connected platforms</p>
+</div>
+
+<!-- Filter Bar -->
+<div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
+    <form id="postFilterForm" method="GET" class="flex flex-wrap items-center gap-3">
+        <div class="w-full sm:w-auto">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Platform</label>
+            <select name="platform" id="filterPlatform"
+                    class="w-full sm:min-w-[140px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="">All Platforms</option>
+                {% for p in platforms %}
+                <option value="{{ p }}" {{ 'selected' if request.args.get('platform') == p }}>{{ platform_labels.get(p, p) }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="w-full sm:w-auto">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Page</label>
+            <select name="page_id" id="filterPage"
+                    class="w-full sm:min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="">All Pages</option>
+                {% for cp in connected_pages %}
+                <option value="{{ cp.id }}" data-platform="{{ cp.platform }}" {{ 'selected' if request.args.get('page_id') == cp.id|string }}>{{ cp.page_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="w-full sm:w-auto">
+            <label class="block text-xs font-medium text-gray-500 mb-1">Sort</label>
+            <select name="sort"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="date" {{ 'selected' if request.args.get('sort', 'date') == 'date' }}>Sort by Date</option>
+                <option value="likes" {{ 'selected' if request.args.get('sort') == 'likes' }}>Sort by Likes</option>
+                <option value="comments" {{ 'selected' if request.args.get('sort') == 'comments' }}>Sort by Comments</option>
+                <option value="reach" {{ 'selected' if request.args.get('sort') == 'reach' }}>Sort by Reach</option>
+            </select>
+        </div>
+        <div class="flex items-end gap-2">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">&nbsp;</label>
+                <button type="submit"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center gap-1">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+            {% if request.args.get('platform') or request.args.get('page_id') or request.args.get('q') or request.args.get('sort', 'date') != 'date' %}
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">&nbsp;</label>
+                <a href="{{ url_for('posts.index') }}"
+                   class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition inline-flex items-center gap-1">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Posts Table -->
+{% if posts %}
+<div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500 w-10"></th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500 w-16">Media</th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500">Caption</th>
+                    <th class="px-4 py-3 text-center font-medium text-gray-500 w-20">
+                        <i class="fas fa-heart text-rose-400"></i>
+                    </th>
+                    <th class="px-4 py-3 text-center font-medium text-gray-500 w-20">
+                        <i class="fas fa-comment text-blue-400"></i>
+                    </th>
+                    <th class="px-4 py-3 text-center font-medium text-gray-500 w-20">
+                        <i class="fas fa-share text-emerald-400"></i>
+                    </th>
+                    <th class="px-4 py-3 text-left font-medium text-gray-500 w-28">Date</th>
+                    <th class="px-4 py-3 text-center font-medium text-gray-500 w-24">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for post in posts %}
+                <tr class="hover:bg-gray-50 transition cursor-pointer group"
+                    onclick="window.location='{{ url_for('posts.detail', post_id=post.id) }}'">
+                    <!-- Platform Icon -->
+                    <td class="px-4 py-3">
+                        <div class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <i class="fab fa-{{ post.platform }}
+                                {% if post.platform == 'facebook' %}text-blue-600
+                                {% elif post.platform == 'instagram' %}text-pink-500
+                                {% elif post.platform == 'youtube' %}text-red-600
+                                {% elif post.platform == 'linkedin' %}text-blue-700
+                                {% elif post.platform == 'twitter' %}text-gray-800
+                                {% else %}text-gray-500{% endif %}"></i>
+                        </div>
+                    </td>
+
+                    <!-- Thumbnail -->
+                    <td class="px-4 py-3">
+                        {% if post.thumbnail_url or post.media_url %}
+                        <img src="{{ post.thumbnail_url or post.media_url }}" alt=""
+                             class="w-12 h-12 rounded-lg object-cover bg-gray-100">
+                        {% else %}
+                        <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <i class="fas fa-image text-gray-300"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Caption -->
+                    <td class="px-4 py-3 max-w-xs">
+                        <p class="text-gray-800 text-sm line-clamp-2">{{ post.caption or '(No caption)' }}</p>
+                    </td>
+
+                    <!-- Likes -->
+                    <td class="px-4 py-3 text-center text-gray-600">{{ post.likes_count | default(0) }}</td>
+
+                    <!-- Comments -->
+                    <td class="px-4 py-3 text-center text-gray-600">{{ post.comments_count | default(0) }}</td>
+
+                    <!-- Shares -->
+                    <td class="px-4 py-3 text-center text-gray-600">{{ post.shares_count | default(0) }}</td>
+
+                    <!-- Date -->
+                    <td class="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                        {% if post.posted_at %}
+                        {{ post.posted_at.strftime('%b %d, %Y') }}
+                        {% else %}
+                        --
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-4 py-3 text-center" onclick="event.stopPropagation()">
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="{{ url_for('posts.detail', post_id=post.id) }}"
+                               class="px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition">
+                                View
+                            </a>
+                            {% if post.permalink %}
+                            <a href="{{ post.permalink }}" target="_blank" rel="noopener noreferrer"
+                               class="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 transition" title="Open original post">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'components/pagination.html' %}
+{% else %}
+{% with icon='newspaper', title='No posts yet', message='Posts will appear here once you sync your connected pages.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var platformSelect = document.getElementById('filterPlatform');
+    var pageSelect = document.getElementById('filterPage');
+    var allPageOptions = Array.from(pageSelect.querySelectorAll('option[data-platform]'));
+
+    platformSelect.addEventListener('change', function() {
+        var platform = this.value;
+        // Reset page select
+        pageSelect.value = '';
+        // Show/hide page options based on platform
+        allPageOptions.forEach(function(opt) {
+            if (!platform || opt.dataset.platform === platform) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+            }
+        });
+    });
+
+    // On page load, filter pages based on current platform selection
+    var currentPlatform = platformSelect.value;
+    if (currentPlatform) {
+        allPageOptions.forEach(function(opt) {
+            if (opt.dataset.platform !== currentPlatform) {
+                opt.style.display = 'none';
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

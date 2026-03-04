@@ -1,0 +1,317 @@
+{% extends 'auth/auth_base.html' %}
+{% block title %}Sign Up — User Monitor{% endblock %}
+
+{% block auth_form %}
+<div class="bg-white rounded-2xl shadow-sm border p-8">
+    <h2 class="text-2xl font-bold text-gray-800">Create your account</h2>
+    <p class="text-sm text-gray-500 mt-1 mb-6">Start monitoring your social media presence</p>
+
+    <form id="signupForm" method="POST" action="{{ url_for('auth.signup') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-4 form-field-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-user"></i>
+                </span>
+                <input type="text" name="full_name" id="fullName" required
+                       class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       placeholder="John Doe">
+            </div>
+            <p id="fullNameError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+        </div>
+
+        <div class="mb-4 form-field-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-envelope"></i>
+                </span>
+                <input type="email" name="email" id="signupEmail" required
+                       class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       placeholder="you@company.com">
+                <span id="emailSpinner" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hidden">
+                    <i class="fas fa-spinner fa-spin text-sm"></i>
+                </span>
+                <span id="emailOk" class="absolute inset-y-0 right-0 flex items-center pr-3 text-emerald-500 hidden">
+                    <i class="fas fa-check-circle text-sm"></i>
+                </span>
+            </div>
+            <p id="emailError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+        </div>
+
+        <div class="mb-4 form-field-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Company <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-building"></i>
+                </span>
+                <select name="company" id="companySelect" required
+                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition appearance-none bg-white">
+                    <option value="" disabled selected>Select your company</option>
+                    {% for company in companies %}
+                    <option value="{{ company.id }}">{{ company.name }}</option>
+                    {% endfor %}
+                </select>
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 pointer-events-none">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </span>
+            </div>
+            <p id="companyError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+        </div>
+
+        <div class="mb-4 form-field-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Designation <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-briefcase"></i>
+                </span>
+                <select name="designation" id="designationSelect" required
+                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition appearance-none bg-white">
+                    <option value="" disabled selected>Select your designation</option>
+                    {% for designation in designations %}
+                    <option value="{{ designation.id }}">{{ designation.name }}</option>
+                    {% endfor %}
+                </select>
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 pointer-events-none">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </span>
+            </div>
+            <p id="designationError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+        </div>
+
+        <div class="mb-4 form-field-5">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-lock"></i>
+                </span>
+                <input type="password" name="password" id="signupPassword" required minlength="6"
+                       class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       placeholder="••••••••">
+                <button type="button" title="Toggle password visibility" onclick="togglePassword('signupPassword', this)" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <p id="passwordError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+            <div id="passwordRules" class="mt-1.5 space-y-0.5">
+                <p id="ruleLength" class="text-xs text-gray-400"><i class="fas fa-circle text-[6px] mr-1.5"></i>At least 6 characters</p>
+                <p id="ruleLetter" class="text-xs text-gray-400"><i class="fas fa-circle text-[6px] mr-1.5"></i>Contains a letter</p>
+                <p id="ruleNumber" class="text-xs text-gray-400"><i class="fas fa-circle text-[6px] mr-1.5"></i>Contains a number</p>
+                <p id="ruleSpecial" class="text-xs text-gray-400"><i class="fas fa-circle text-[6px] mr-1.5"></i>Contains a special character (!@#$...)</p>
+            </div>
+        </div>
+
+        <div class="mb-6 form-field-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password <span class="text-rose-500">*</span></label>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-lock"></i>
+                </span>
+                <input type="password" name="confirm_password" id="signupConfirmPassword" required
+                       class="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       placeholder="••••••••">
+                <button type="button" title="Toggle password visibility" onclick="togglePassword('signupConfirmPassword', this)" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <p id="confirmError" class="text-xs text-rose-500 mt-1 hidden"><i class="fas fa-exclamation-circle mr-1"></i><span></span></p>
+        </div>
+
+        <button type="submit" id="submitBtn"
+                class="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 auth-btn">
+            Create Account
+        </button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-gray-500 auth-footer">
+        Already have an account?
+        <a href="{{ url_for('auth.login') }}" class="text-indigo-600 font-medium hover:underline">Sign in</a>
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePassword(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+(function() {
+    var form = document.getElementById('signupForm');
+    var fullName = document.getElementById('fullName');
+    var email = document.getElementById('signupEmail');
+    var company = document.getElementById('companySelect');
+    var designation = document.getElementById('designationSelect');
+    var password = document.getElementById('signupPassword');
+    var confirm = document.getElementById('signupConfirmPassword');
+
+    var emailSpinner = document.getElementById('emailSpinner');
+    var emailOk = document.getElementById('emailOk');
+    var emailCheckTimer = null;
+    var emailExists = false;
+
+    function showError(id, msg) {
+        var el = document.getElementById(id);
+        el.querySelector('span').textContent = msg;
+        el.classList.remove('hidden');
+    }
+    function hideError(id) {
+        var el = document.getElementById(id);
+        el.classList.add('hidden');
+    }
+
+    function setBorder(input, state) {
+        input.classList.remove('border-rose-400', 'border-emerald-400', 'border-gray-300');
+        if (state === 'error') input.classList.add('border-rose-400');
+        else if (state === 'ok') input.classList.add('border-emerald-400');
+        else input.classList.add('border-gray-300');
+    }
+
+    function setRule(id, pass) {
+        var el = document.getElementById(id);
+        var icon = el.querySelector('i');
+        if (pass) {
+            el.classList.remove('text-gray-400', 'text-rose-500');
+            el.classList.add('text-emerald-500');
+            icon.classList.remove('fa-circle', 'fa-times-circle');
+            icon.classList.add('fa-check-circle');
+        } else {
+            el.classList.remove('text-emerald-500', 'text-rose-500');
+            el.classList.add('text-gray-400');
+            icon.classList.remove('fa-check-circle', 'fa-times-circle');
+            icon.classList.add('fa-circle');
+        }
+    }
+
+    fullName.addEventListener('blur', function() {
+        if (!fullName.value.trim()) { showError('fullNameError', 'Full name is required.'); setBorder(fullName, 'error'); }
+        else { hideError('fullNameError'); setBorder(fullName, 'ok'); }
+    });
+    fullName.addEventListener('input', function() {
+        if (fullName.value.trim()) { hideError('fullNameError'); setBorder(fullName, 'ok'); }
+    });
+
+    function isValidEmail(v) {
+        return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(v);
+    }
+
+    email.addEventListener('input', function() {
+        emailOk.classList.add('hidden');
+        emailSpinner.classList.add('hidden');
+        emailExists = false;
+        var val = email.value.trim();
+        if (!val) { hideError('emailError'); setBorder(email, 'default'); return; }
+        if (!isValidEmail(val)) { showError('emailError', 'Please enter a valid email address.'); setBorder(email, 'error'); return; }
+        hideError('emailError');
+        setBorder(email, 'default');
+        clearTimeout(emailCheckTimer);
+        emailCheckTimer = setTimeout(function() { checkEmail(val); }, 500);
+    });
+
+    email.addEventListener('blur', function() {
+        var val = email.value.trim();
+        if (!val) { showError('emailError', 'Email is required.'); setBorder(email, 'error'); return; }
+        if (!isValidEmail(val)) { showError('emailError', 'Please enter a valid email address.'); setBorder(email, 'error'); return; }
+    });
+
+    function checkEmail(val) {
+        emailSpinner.classList.remove('hidden');
+        emailOk.classList.add('hidden');
+        fetch('/api/check-email?email=' + encodeURIComponent(val))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                emailSpinner.classList.add('hidden');
+                if (data.exists) {
+                    emailExists = true;
+                    showError('emailError', 'This email is already registered.');
+                    setBorder(email, 'error');
+                    emailOk.classList.add('hidden');
+                } else {
+                    emailExists = false;
+                    hideError('emailError');
+                    setBorder(email, 'ok');
+                    emailOk.classList.remove('hidden');
+                }
+            })
+            .catch(function() { emailSpinner.classList.add('hidden'); });
+    }
+
+    company.addEventListener('change', function() { if (company.value) { hideError('companyError'); setBorder(company, 'ok'); } });
+    company.addEventListener('blur', function() { if (!company.value) { showError('companyError', 'Please select a company.'); setBorder(company, 'error'); } });
+
+    designation.addEventListener('change', function() { if (designation.value) { hideError('designationError'); setBorder(designation, 'ok'); } });
+    designation.addEventListener('blur', function() { if (!designation.value) { showError('designationError', 'Please select a designation.'); setBorder(designation, 'error'); } });
+
+    password.addEventListener('input', function() {
+        var val = password.value;
+        var hasLength = val.length >= 6;
+        var hasLetter = /[A-Za-z]/.test(val);
+        var hasNumber = /[0-9]/.test(val);
+        var hasSpecial = /[^A-Za-z0-9]/.test(val);
+        setRule('ruleLength', hasLength);
+        setRule('ruleLetter', hasLetter);
+        setRule('ruleNumber', hasNumber);
+        setRule('ruleSpecial', hasSpecial);
+        var allPass = hasLength && hasLetter && hasNumber && hasSpecial;
+        if (val && !allPass) { setBorder(password, 'error'); }
+        else if (val && allPass) { hideError('passwordError'); setBorder(password, 'ok'); }
+        else { setBorder(password, 'default'); }
+        if (confirm.value && val !== confirm.value) { showError('confirmError', 'Passwords do not match.'); setBorder(confirm, 'error'); }
+        else if (confirm.value && val === confirm.value) { hideError('confirmError'); setBorder(confirm, 'ok'); }
+    });
+    password.addEventListener('blur', function() {
+        if (!password.value) { showError('passwordError', 'Password is required.'); setBorder(password, 'error'); }
+        else if (password.value.length < 6 || !/[A-Za-z]/.test(password.value) || !/[0-9]/.test(password.value) || !/[^A-Za-z0-9]/.test(password.value)) {
+            showError('passwordError', 'Password must have letters, numbers, and a special character.');
+            setBorder(password, 'error');
+        }
+    });
+
+    confirm.addEventListener('input', function() {
+        if (confirm.value && confirm.value !== password.value) { showError('confirmError', 'Passwords do not match.'); setBorder(confirm, 'error'); }
+        else if (confirm.value && confirm.value === password.value) { hideError('confirmError'); setBorder(confirm, 'ok'); }
+        else { hideError('confirmError'); setBorder(confirm, 'default'); }
+    });
+    confirm.addEventListener('blur', function() {
+        if (!confirm.value) { showError('confirmError', 'Please confirm your password.'); setBorder(confirm, 'error'); }
+        else if (confirm.value !== password.value) { showError('confirmError', 'Passwords do not match.'); setBorder(confirm, 'error'); }
+    });
+
+    form.addEventListener('submit', function(e) {
+        var valid = true;
+        if (!fullName.value.trim()) { showError('fullNameError', 'Full name is required.'); setBorder(fullName, 'error'); valid = false; }
+        if (!email.value.trim()) { showError('emailError', 'Email is required.'); setBorder(email, 'error'); valid = false; }
+        else if (!isValidEmail(email.value.trim())) { showError('emailError', 'Please enter a valid email address.'); setBorder(email, 'error'); valid = false; }
+        else if (emailExists) { showError('emailError', 'This email is already registered.'); setBorder(email, 'error'); valid = false; }
+        if (!company.value) { showError('companyError', 'Please select a company.'); setBorder(company, 'error'); valid = false; }
+        if (!designation.value) { showError('designationError', 'Please select a designation.'); setBorder(designation, 'error'); valid = false; }
+        if (!password.value) { showError('passwordError', 'Password is required.'); setBorder(password, 'error'); valid = false; }
+        else if (password.value.length < 6 || !/[A-Za-z]/.test(password.value) || !/[0-9]/.test(password.value) || !/[^A-Za-z0-9]/.test(password.value)) {
+            showError('passwordError', 'Password must have letters, numbers, and a special character.');
+            setBorder(password, 'error');
+            valid = false;
+        }
+        if (!confirm.value) { showError('confirmError', 'Please confirm your password.'); setBorder(confirm, 'error'); valid = false; }
+        else if (confirm.value !== password.value) { showError('confirmError', 'Passwords do not match.'); setBorder(confirm, 'error'); valid = false; }
+
+        if (!valid) {
+            e.preventDefault();
+            var firstErr = form.querySelector('.border-rose-400');
+            if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+})();
+</script>
+{% endblock %}

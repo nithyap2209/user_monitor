@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block auth_content %}
+<style>
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-15px) rotate(3deg); }
+    66% { transform: translateY(8px) rotate(-2deg); }
+}
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.auth-card { animation: fadeSlideUp 0.6s ease forwards 0.15s; opacity: 0; }
+.form-field-1 { animation: fadeIn 0.4s ease forwards 0.3s; opacity: 0; }
+.form-field-2 { animation: fadeIn 0.4s ease forwards 0.4s; opacity: 0; }
+.form-field-3 { animation: fadeIn 0.4s ease forwards 0.5s; opacity: 0; }
+.form-field-4 { animation: fadeIn 0.4s ease forwards 0.6s; opacity: 0; }
+.form-field-5 { animation: fadeIn 0.4s ease forwards 0.7s; opacity: 0; }
+.form-field-6 { animation: fadeIn 0.4s ease forwards 0.8s; opacity: 0; }
+.auth-btn {
+    animation: fadeIn 0.4s ease forwards 0.85s; opacity: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.auth-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(67, 56, 202, 0.3); }
+.auth-btn:active { transform: translateY(0); }
+.auth-footer { animation: fadeIn 0.4s ease forwards 0.95s; opacity: 0; }
+.float-icon {
+    position: absolute;
+    opacity: 0.07;
+    animation: float 8s ease-in-out infinite;
+}
+</style>
+
+<div class="min-h-screen flex">
+    <!-- Left Panel — Social Media Monitoring Brand (hidden on mobile) -->
+    <div class="hidden lg:flex lg:w-[45%] xl:w-1/2 bg-indigo-950 relative overflow-hidden flex-col items-center justify-center p-12">
+        <!-- Floating social & analytics icons -->
+        <i class="fab fa-facebook float-icon text-white text-5xl" style="top: 12%; left: 15%; animation-delay: 0s;"></i>
+        <i class="fab fa-instagram float-icon text-white text-4xl" style="top: 22%; right: 18%; animation-delay: -2s;"></i>
+        <i class="fab fa-youtube float-icon text-white text-5xl" style="bottom: 28%; left: 10%; animation-delay: -4s;"></i>
+        <i class="fab fa-linkedin float-icon text-white text-4xl" style="bottom: 12%; right: 22%; animation-delay: -1s;"></i>
+        <i class="fab fa-x-twitter float-icon text-white text-4xl" style="top: 52%; left: 8%; animation-delay: -3s;"></i>
+        <i class="fas fa-chart-bar float-icon text-white text-5xl" style="top: 8%; right: 12%; animation-delay: -5s;"></i>
+        <i class="fas fa-comments float-icon text-white text-4xl" style="bottom: 42%; right: 8%; animation-delay: -6s;"></i>
+        <i class="fab fa-google float-icon text-white text-3xl" style="bottom: 6%; left: 30%; animation-delay: -2.5s;"></i>
+
+        <!-- Decorative rings -->
+        <div class="absolute w-[500px] h-[500px] rounded-full border border-indigo-900/40" style="top: -120px; left: -160px;"></div>
+        <div class="absolute w-[400px] h-[400px] rounded-full border border-indigo-900/40" style="bottom: -100px; right: -120px;"></div>
+        <div class="absolute w-[220px] h-[220px] rounded-full bg-indigo-500/[0.06]" style="top: 18%; right: 5%;"></div>
+        <div class="absolute w-[180px] h-[180px] rounded-full bg-indigo-400/[0.05]" style="bottom: 20%; left: 5%;"></div>
+
+        <!-- Brand content -->
+        <div class="relative z-10 text-center max-w-sm">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-400 to-indigo-600 mb-6 shadow-lg shadow-indigo-500/20">
+                <i class="fas fa-chart-line text-white text-2xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">User Monitor</h1>
+            <p class="text-indigo-300/70 text-sm mb-10">Social Media Monitoring Platform</p>
+
+            <!-- Feature list -->
+            <div class="space-y-4 text-left">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0 border border-indigo-400/10">
+                        <i class="fas fa-comments text-indigo-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-medium">Monitor Comments</p>
+                        <p class="text-indigo-200/60 text-xs">Track conversations across all platforms</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0 border border-indigo-400/10">
+                        <i class="fas fa-brain text-indigo-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-medium">AI Sentiment Analysis</p>
+                        <p class="text-indigo-200/60 text-xs">Understand audience emotions in real-time</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0 border border-indigo-400/10">
+                        <i class="fas fa-address-card text-indigo-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-medium">Auto-Extract Contacts</p>
+                        <p class="text-indigo-200/60 text-xs">Capture leads from social interactions</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center flex-shrink-0 border border-indigo-400/10">
+                        <i class="fas fa-chart-pie text-indigo-400 text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-medium">Analytics Dashboard</p>
+                        <p class="text-indigo-200/60 text-xs">Visual insights into your social performance</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform icons row -->
+            <div class="mt-10 flex items-center justify-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/[0.08]">
+                    <i class="fab fa-facebook-f text-indigo-400 text-sm"></i>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/[0.08]">
+                    <i class="fab fa-instagram text-pink-400 text-sm"></i>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/[0.08]">
+                    <i class="fab fa-youtube text-red-400 text-sm"></i>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/[0.08]">
+                    <i class="fab fa-linkedin-in text-blue-300 text-sm"></i>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/[0.08]">
+                    <i class="fab fa-x-twitter text-white text-sm"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel — Form -->
+    <div class="w-full lg:w-[55%] xl:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 bg-gray-50 overflow-y-auto min-h-screen relative">
+        <!-- Mobile-only branded header -->
+        <div class="lg:hidden mb-8 text-center pt-2">
+            <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 shadow-lg shadow-indigo-500/20 mb-3">
+                <i class="fas fa-chart-line text-white text-lg"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800">User Monitor</h1>
+            <p class="text-xs text-gray-500 mt-0.5">Social Media Monitoring Platform</p>
+        </div>
+
+        <div class="w-full max-w-md auth-card">
+            {% block auth_form %}{% endblock %}
+        </div>
+
+        <!-- Mobile-only platform strip -->
+        <div class="lg:hidden mt-8 flex items-center justify-center gap-3 opacity-40">
+            <i class="fab fa-facebook text-gray-400 text-lg"></i>
+            <i class="fab fa-instagram text-gray-400 text-lg"></i>
+            <i class="fab fa-youtube text-gray-400 text-lg"></i>
+            <i class="fab fa-linkedin text-gray-400 text-lg"></i>
+            <i class="fab fa-x-twitter text-gray-400 text-lg"></i>
+        </div>
+    </div>
+</div>
+{% endblock %}

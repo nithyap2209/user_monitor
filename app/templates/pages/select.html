@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Select Page — User Monitor{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <a href="{{ url_for('pages.index') }}" class="text-sm text-indigo-600 hover:underline">&larr; Back to Connected Pages</a>
+        <h2 class="text-2xl font-bold text-gray-800 mt-2">Select a {{ platform_label }} Page</h2>
+        <p class="text-sm text-gray-500 mt-1">Choose which page you want to connect to User Monitor</p>
+    </div>
+
+    {% if pages_list %}
+    <div class="space-y-3">
+        {% for pg in pages_list %}
+        <form method="POST" action="{{ url_for('pages.confirm_page') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="page_index" value="{{ loop.index0 }}">
+            <button type="submit"
+                    class="w-full bg-white rounded-xl shadow-sm border p-4 hover:shadow-md hover:border-indigo-300 transition text-left flex items-center gap-4 group">
+                <!-- Page Avatar -->
+                {% if platform == 'instagram' %}
+                    {% set avatar = pg.get('profile_picture_url') %}
+                {% elif platform == 'linkedin' %}
+                    {% set avatar = pg.get('logo_url') %}
+                {% else %}
+                    {% set avatar = pg.get('picture', {}).get('data', {}).get('url') if pg.get('picture') is mapping else None %}
+                {% endif %}
+                <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {% if avatar %}
+                    <img src="{{ avatar }}" alt="" class="w-full h-full object-cover rounded-lg">
+                    {% else %}
+                    <i class="fab fa-{{ platform }} text-xl
+                        {% if platform == 'facebook' %}text-blue-600
+                        {% elif platform == 'instagram' %}text-pink-500
+                        {% elif platform == 'linkedin' %}text-blue-700
+                        {% else %}text-gray-500{% endif %}"></i>
+                    {% endif %}
+                </div>
+
+                <!-- Page Info -->
+                <div class="flex-1 min-w-0">
+                    <p class="font-semibold text-gray-800 group-hover:text-indigo-600 transition truncate">
+                        {% if platform == 'instagram' %}
+                            {{ pg.get('name', 'Instagram Account') }}
+                        {% elif platform == 'linkedin' %}
+                            {{ pg.get('name', 'LinkedIn Organization') }}
+                        {% else %}
+                            {{ pg.get('name', 'Facebook Page') }}
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        {% if platform == 'instagram' %}
+                            {{ pg.get('followers_count', 0) | int }} followers
+                        {% elif platform == 'linkedin' %}
+                            {% if pg.get('vanity_name') %}linkedin.com/company/{{ pg.get('vanity_name') }}{% endif %}
+                            {% if pg.get('followers_count') %} &middot; {{ pg.get('followers_count') | int }} followers{% endif %}
+                        {% else %}
+                            {{ pg.get('category', '') }}
+                            {% if pg.get('fan_count') %} &middot; {{ pg.get('fan_count') | int }} fans{% endif %}
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-0.5">ID: {{ pg.get('id', '') }}</p>
+                </div>
+
+                <!-- Arrow -->
+                <div class="flex-shrink-0 text-gray-300 group-hover:text-indigo-500 transition">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-sm border p-8 text-center">
+        <i class="fas fa-inbox text-4xl text-gray-300 mb-3"></i>
+        <p class="text-gray-500">No pages found for this account.</p>
+        <a href="{{ url_for('pages.index') }}" class="mt-4 inline-block text-indigo-600 hover:underline text-sm">Go back</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'auth/auth_base.html' %}
+{% block title %}Verify Email — User Monitor{% endblock %}
+
+{% block auth_form %}
+<div class="bg-white rounded-2xl shadow-sm border p-8">
+    <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-50 mb-3">
+            <i class="fas fa-envelope-open-text text-amber-500 text-xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-800">Verify your email</h2>
+        <p class="text-sm text-gray-500 mt-1">Please verify your email address to access your account</p>
+    </div>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 form-field-1">
+        <p class="text-sm text-amber-700">
+            <i class="fas fa-info-circle mr-1"></i>
+            A verification email was sent when you signed up. Check your inbox and spam folder.
+        </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('auth.verify_email_page') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="current_email" value="{{ email }}">
+
+        <div class="mb-5 form-field-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <p class="text-xs text-gray-400 mb-1.5">You can change your email if the current one is incorrect</p>
+            <div class="relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fas fa-envelope"></i>
+                </span>
+                <input type="email" name="new_email" required value="{{ email }}"
+                       class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                       placeholder="you@company.com">
+            </div>
+        </div>
+
+        <button type="submit"
+                class="w-full py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300 auth-btn">
+            <i class="fas fa-paper-plane mr-2"></i> Resend Verification Email
+        </button>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-gray-500 auth-footer">
+        <a href="{{ url_for('auth.login') }}" class="text-indigo-600 font-medium hover:underline">
+            <i class="fas fa-arrow-left mr-1 text-xs"></i> Back to login
+        </a>
+    </p>
+</div>
+{% endblock %}

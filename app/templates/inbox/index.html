@@ -1,0 +1,611 @@
+{% extends 'base.html' %}
+{% block title %}Comment Inbox — User Monitor{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6">
+    <h2 class="text-2xl font-bold text-gray-800">Comment Inbox</h2>
+    <p class="text-sm text-gray-500 mt-1">Engagement center — reply to comments and manage conversations</p>
+</div>
+
+<!-- Filter Bar (same style as dashboard) -->
+<div class="bg-white rounded-xl shadow-sm border p-4 mb-4">
+    <div class="flex flex-wrap items-center gap-3">
+        <!-- Platform Filter -->
+        <div class="flex flex-col gap-1 w-full sm:w-auto">
+            <label class="text-xs font-medium text-gray-500">Platform</label>
+            <select id="filterPlatform"
+                    class="w-full sm:min-w-[160px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="">All Platforms</option>
+                {% for p in platforms %}
+                <option value="{{ p }}" {{ 'selected' if selected_platform == p else '' }}>
+                    {{ platform_labels.get(p, p) }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Channel / Page Filter (cascading - populated by JS) -->
+        <div class="flex flex-col gap-1 w-full sm:w-auto" id="channelFilterWrapper" style="{{ '' if selected_platform else 'display: none;' }}">
+            <label class="text-xs font-medium text-gray-500" id="channelFilterLabel">Channel / Page</label>
+            <select id="filterChannel"
+                    class="w-full sm:min-w-[180px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="">All Channels</option>
+            </select>
+        </div>
+
+        <!-- Post / Video Filter (cascading - populated by JS) -->
+        <div class="flex flex-col gap-1 w-full sm:w-auto" id="postFilterWrapper" style="{{ '' if selected_page_id else 'display: none;' }}">
+            <label class="text-xs font-medium text-gray-500" id="postFilterLabel">Post / Video</label>
+            <select id="filterPost"
+                    class="w-full sm:min-w-[200px] sm:max-w-[300px] px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                <option value="">All Posts</option>
+            </select>
+        </div>
+
+        <!-- Clear Filters -->
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-medium text-transparent">Clear</label>
+            <button id="clearFilters"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition inline-flex items-center gap-1"
+                    style="{{ '' if selected_platform or selected_page_id or selected_post_id else 'display: none;' }}">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+{% set filter_qs = '&platform=' ~ selected_platform if selected_platform else '' %}
+{% set filter_qs = filter_qs ~ ('&page_id=' ~ selected_page_id if selected_page_id else '') %}
+{% set filter_qs = filter_qs ~ ('&post_id=' ~ selected_post_id if selected_post_id else '') %}
+<div class="flex gap-1.5 mb-4 flex-wrap">
+    <a href="?filter=unreplied{{ filter_qs }}"
+       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition whitespace-nowrap
+              {{ 'bg-indigo-600 text-white shadow-sm' if filter_type == 'unreplied' else 'bg-white border text-gray-600 hover:bg-gray-50' }}">
+        <i class="fas fa-reply"></i> <span class="hidden xs:inline sm:inline">Unreplied</span><span class="sm:hidden">Unreplied</span>
+    </a>
+    <a href="?filter=flagged{{ filter_qs }}"
+       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition whitespace-nowrap
+              {{ 'bg-indigo-600 text-white shadow-sm' if filter_type == 'flagged' else 'bg-white border text-gray-600 hover:bg-gray-50' }}">
+        <i class="fas fa-flag"></i> Flagged
+    </a>
+    <a href="?filter=negative{{ filter_qs }}"
+       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition whitespace-nowrap
+              {{ 'bg-indigo-600 text-white shadow-sm' if filter_type == 'negative' else 'bg-white border text-gray-600 hover:bg-gray-50' }}">
+        <i class="fas fa-frown"></i> Negative
+    </a>
+    <a href="?filter=leads{{ filter_qs }}"
+       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition whitespace-nowrap
+              {{ 'bg-indigo-600 text-white shadow-sm' if filter_type == 'leads' else 'bg-white border text-gray-600 hover:bg-gray-50' }}">
+        <i class="fas fa-user-plus"></i> Leads
+    </a>
+    <a href="?filter=all{{ filter_qs }}"
+       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition whitespace-nowrap
+              {{ 'bg-indigo-600 text-white shadow-sm' if filter_type == 'all' else 'bg-white border text-gray-600 hover:bg-gray-50' }}">
+        <i class="fas fa-list"></i> All
+    </a>
+</div>
+
+{% if comments %}
+<!-- Split Panel Layout -->
+<div class="flex flex-col md:flex-row bg-white rounded-xl shadow-sm border md:overflow-hidden md:h-[calc(100vh-16rem)]">
+
+    <!-- LEFT PANEL: Comment List -->
+    <div class="{% if explicit_active %}hidden md:block{% endif %} w-full md:w-1/3 md:overflow-y-auto border-b md:border-b-0 md:border-r border-gray-200">
+        {% for comment in comments %}
+        <a href="?filter={{ filter_type }}&active={{ comment.id }}{{ filter_qs }}"
+           class="block px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer
+                  {{ 'bg-indigo-50 border-l-4 border-l-indigo-500' if active_comment and active_comment.id == comment.id else 'border-l-4 border-l-transparent' }}"
+           id="inbox-item-{{ comment.id }}">
+            <div class="flex items-start gap-3">
+                <!-- Author initial -->
+                <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold
+                    {% if comment.sentiment == 'positive' %}bg-emerald-100 text-emerald-700
+                    {% elif comment.sentiment == 'negative' %}bg-rose-100 text-rose-700
+                    {% elif comment.sentiment == 'lead' %}bg-blue-100 text-blue-700
+                    {% else %}bg-gray-200 text-gray-600{% endif %}">
+                    {{ (comment.author_name or '?')[0] | upper }}
+                </div>
+
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-medium text-gray-800 truncate">{{ comment.author_name or 'Unknown' }}</span>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <!-- Sentiment dot -->
+                            {% if comment.sentiment %}
+                            <span class="w-2 h-2 rounded-full inline-block
+                                {% if comment.sentiment == 'positive' %}bg-emerald-500
+                                {% elif comment.sentiment == 'negative' %}bg-rose-500
+                                {% elif comment.sentiment == 'lead' %}bg-blue-500
+                                {% elif comment.sentiment == 'business' %}bg-indigo-500
+                                {% else %}bg-gray-400{% endif %}"></span>
+                            {% endif %}
+                            <!-- Platform icon -->
+                            <i class="fab fa-{{ comment.platform }} text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">{{ comment.comment_text[:80] }}{{ '...' if comment.comment_text|length > 80 else '' }}</p>
+                    <span class="text-xs text-gray-400 mt-1 block">
+                        {% if comment.commented_at %}
+                        {{ comment.commented_at.strftime('%b %d, %H:%M') }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+
+        <!-- Pagination inside left panel -->
+        {% if pagination and pagination.pages > 1 %}
+        <div class="p-3 border-t border-gray-200">
+            <div class="flex items-center justify-between text-xs text-gray-500">
+                {% if pagination.has_prev %}
+                <a href="?filter={{ filter_type }}&page={{ pagination.prev_num }}{{ filter_qs }}" class="text-indigo-600 hover:underline">
+                    <i class="fas fa-chevron-left mr-0.5"></i> Prev
+                </a>
+                {% else %}
+                <span class="text-gray-300"><i class="fas fa-chevron-left mr-0.5"></i> Prev</span>
+                {% endif %}
+
+                <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+                {% if pagination.has_next %}
+                <a href="?filter={{ filter_type }}&page={{ pagination.next_num }}{{ filter_qs }}" class="text-indigo-600 hover:underline">
+                    Next <i class="fas fa-chevron-right ml-0.5"></i>
+                </a>
+                {% else %}
+                <span class="text-gray-300">Next <i class="fas fa-chevron-right ml-0.5"></i></span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT PANEL: Selected Comment Detail -->
+    <div class="{% if not explicit_active %}hidden md:flex md:items-center md:justify-center{% endif %} w-full md:w-2/3 md:overflow-y-auto p-4 md:p-6">
+        {% if active_comment %}
+
+        <!-- Back button (mobile only) -->
+        <div class="md:hidden mb-4">
+            <a href="?filter={{ filter_type }}{{ filter_qs }}"
+               class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition">
+                <i class="fas fa-arrow-left"></i> Back to inbox
+            </a>
+        </div>
+
+        <!-- Author Info Section -->
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
+                {% if active_comment.sentiment == 'positive' %}bg-emerald-100 text-emerald-700
+                {% elif active_comment.sentiment == 'negative' %}bg-rose-100 text-rose-700
+                {% elif active_comment.sentiment == 'lead' %}bg-blue-100 text-blue-700
+                {% elif active_comment.sentiment == 'business' %}bg-indigo-100 text-indigo-700
+                {% else %}bg-gray-200 text-gray-600{% endif %}">
+                {{ (active_comment.author_name or '?')[0] | upper }}
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">{{ active_comment.author_name or 'Unknown' }}</h3>
+                {% if active_comment.author_profile_url %}
+                <a href="{{ active_comment.author_profile_url }}" target="_blank" rel="noopener noreferrer"
+                   class="text-sm text-indigo-600 hover:underline inline-flex items-center gap-1">
+                    <i class="fas fa-external-link-alt text-xs"></i> View Profile
+                </a>
+                {% endif %}
+                <p class="text-xs text-gray-400 mt-0.5">
+                    <i class="fab fa-{{ active_comment.platform }} mr-0.5"></i>
+                    {{ platform_labels.get(active_comment.platform, active_comment.platform) }}
+                    {% if active_comment.commented_at %}
+                    &middot; {{ active_comment.commented_at.strftime('%b %d, %Y at %H:%M') }}
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Full Comment Text -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <p class="text-sm text-gray-700 whitespace-pre-line">{{ active_comment.comment_text }}</p>
+        </div>
+
+        <!-- Sentiment + Language -->
+        <div class="flex items-center gap-3 mb-6 flex-wrap">
+            {% if active_comment.sentiment %}
+            <span class="text-xs px-2.5 py-1 rounded-full font-medium
+                bg-{{ active_comment.sentiment_color }}-100 text-{{ active_comment.sentiment_color }}-700">
+                {{ active_comment.sentiment | capitalize }}
+            </span>
+            {% endif %}
+
+            {% if active_comment.detected_language %}
+            <span class="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                <i class="fas fa-globe mr-0.5"></i> {{ active_comment.detected_language | upper }}
+            </span>
+            {% endif %}
+
+            {% if active_comment.is_flagged %}
+            <span class="text-xs px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
+                <i class="fas fa-flag mr-0.5"></i> Flagged
+            </span>
+            {% endif %}
+
+            {% if active_comment.has_contact_info %}
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">
+                <i class="fas fa-address-card mr-0.5"></i> Contact Info
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Translation Section -->
+        <div class="mb-6">
+            <div class="flex items-center gap-2 mb-2 flex-wrap" id="translate-controls-{{ active_comment.id }}">
+                <div class="flex items-center gap-1">
+                    <span class="text-xs text-gray-500">From:</span>
+                    <select id="source-lang-{{ active_comment.id }}"
+                            class="source-lang-select px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <option value="auto" selected>Auto Detect</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-xs text-gray-500">To:</span>
+                    <select id="target-lang-{{ active_comment.id }}"
+                            class="translate-lang-select px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <option value="">Select language...</option>
+                    </select>
+                </div>
+                <button onclick="translateComment({{ active_comment.id }})"
+                        id="translate-btn-{{ active_comment.id }}"
+                        class="px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                    <i class="fas fa-language"></i> Translate
+                </button>
+            </div>
+            <div id="translation-result-{{ active_comment.id }}">
+                {% if active_comment.translated_text %}
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 relative">
+                    <button onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-indigo-400 hover:text-indigo-700 p-0.5 leading-none text-lg" title="Dismiss">&times;</button>
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fas fa-language text-indigo-600"></i>
+                        <span class="text-sm font-medium text-indigo-800">Translation</span>
+                        {% if active_comment.detected_language %}
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                            Detected: {{ active_comment.detected_language | capitalize }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-indigo-700">{{ active_comment.translated_text }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reply Section -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Reply</label>
+            <textarea id="reply-input-{{ active_comment.id }}" rows="3"
+                      placeholder="Write your reply..."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"></textarea>
+            <div class="flex justify-end mt-2">
+                <button onclick="sendReply({{ active_comment.id }})"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center gap-1">
+                    <i class="fas fa-paper-plane"></i> Send Reply
+                </button>
+            </div>
+        </div>
+
+        <!-- Related Post Info -->
+        {% if active_comment.post %}
+        <div class="bg-gray-50 border rounded-lg p-4 mb-6">
+            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Related Post</h4>
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <i class="fab fa-{{ active_comment.post.platform }}
+                        {% if active_comment.post.platform == 'facebook' %}text-blue-600
+                        {% elif active_comment.post.platform == 'instagram' %}text-pink-500
+                        {% elif active_comment.post.platform == 'youtube' %}text-red-600
+                        {% elif active_comment.post.platform == 'linkedin' %}text-blue-700
+                        {% elif active_comment.post.platform == 'twitter' %}text-gray-800
+                        {% else %}text-gray-500{% endif %} text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-700 line-clamp-2">{{ active_comment.post.caption[:100] ~ '...' if active_comment.post.caption and active_comment.post.caption|length > 100 else active_comment.post.caption or '(No caption)' }}</p>
+                </div>
+                <a href="{{ url_for('posts.detail', post_id=active_comment.post.id) }}"
+                   class="text-xs text-indigo-600 hover:underline flex-shrink-0">View Post</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reply History -->
+        {% if active_comment.reply_text %}
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
+            <h4 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">
+                <i class="fas fa-check-circle mr-1"></i> Previous Reply
+            </h4>
+            <p class="text-sm text-emerald-800">{{ active_comment.reply_text }}</p>
+            <div class="flex items-center gap-2 mt-2 text-xs text-emerald-600">
+                {% if active_comment.replier %}
+                <span><i class="fas fa-user mr-0.5"></i> {{ active_comment.replier.full_name }}</span>
+                {% endif %}
+                {% if active_comment.replied_at %}
+                <span><i class="fas fa-clock mr-0.5"></i> {{ active_comment.replied_at.strftime('%b %d, %Y %H:%M') }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Child Replies / Thread -->
+        {% set child_replies = active_comment.replies.all() %}
+        {% if child_replies %}
+        <div class="mb-6">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-comments mr-1"></i> Thread ({{ child_replies|length }})
+            </h4>
+            <div class="space-y-2 pl-4 border-l-2 border-gray-200">
+                {% for reply in child_replies %}
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                            {{ (reply.author_name or '?')[0] | upper }}
+                        </div>
+                        <span class="text-xs font-medium text-gray-700">{{ reply.author_name or 'Unknown' }}</span>
+                        {% if reply.commented_at %}
+                        <span class="text-xs text-gray-400">{{ reply.commented_at.strftime('%b %d, %H:%M') }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-gray-600 ml-8">{{ reply.comment_text }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- No active comment selected -->
+        <div class="flex flex-col items-center justify-center w-full text-center py-16">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <i class="fas fa-hand-pointer text-2xl text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-700 mb-1">Select a comment</h3>
+            <p class="text-sm text-gray-500 max-w-sm">Choose a comment from the left panel to view details and reply.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% else %}
+{% with icon='inbox', title='Inbox is empty', message='All caught up! No comments match the current filter.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/inbox.js') }}"></script>
+<script>
+(function() {
+    // Platform-specific labels (same as dashboard)
+    var PLATFORM_CHANNEL_LABELS = {
+        youtube: { channel: 'Channel', post: 'Video' },
+        facebook: { channel: 'Page', post: 'Post' },
+        instagram: { channel: 'Account', post: 'Post' },
+        linkedin: { channel: 'Page', post: 'Post' },
+        twitter: { channel: 'Account', post: 'Post' },
+        google_reviews: { channel: 'Location', post: 'Review' },
+    };
+
+    // DOM references
+    var filterPlatform = document.getElementById('filterPlatform');
+    var filterChannel = document.getElementById('filterChannel');
+    var filterPost = document.getElementById('filterPost');
+    var channelWrapper = document.getElementById('channelFilterWrapper');
+    var postWrapper = document.getElementById('postFilterWrapper');
+    var channelLabel = document.getElementById('channelFilterLabel');
+    var postLabel = document.getElementById('postFilterLabel');
+    var clearBtn = document.getElementById('clearFilters');
+
+    var currentFilter = '{{ filter_type }}';
+
+    // Build URL params and navigate
+    function navigateWithFilters() {
+        var params = new URLSearchParams();
+        params.set('filter', currentFilter);
+        if (filterPlatform.value) params.set('platform', filterPlatform.value);
+        if (filterChannel.value) params.set('page_id', filterChannel.value);
+        if (filterPost.value) params.set('post_id', filterPost.value);
+        window.location.href = '?' + params.toString();
+    }
+
+    function updateClearButton() {
+        var hasFilter = filterPlatform.value || filterChannel.value || filterPost.value;
+        clearBtn.style.display = hasFilter ? '' : 'none';
+    }
+
+    // Platform changed -> load channels
+    filterPlatform.addEventListener('change', async function() {
+        var platform = filterPlatform.value;
+        filterChannel.innerHTML = '<option value="">All Channels</option>';
+        filterPost.innerHTML = '<option value="">All Posts</option>';
+        postWrapper.style.display = 'none';
+
+        if (platform) {
+            var labels = PLATFORM_CHANNEL_LABELS[platform] || { channel: 'Channel', post: 'Post' };
+            channelLabel.textContent = labels.channel;
+            postLabel.textContent = labels.post;
+            filterChannel.querySelector('option').textContent = 'All ' + labels.channel + 's';
+            filterPost.querySelector('option').textContent = 'All ' + labels.post + 's';
+            channelWrapper.style.display = '';
+        } else {
+            channelWrapper.style.display = 'none';
+        }
+        updateClearButton();
+        navigateWithFilters();
+    });
+
+    // Channel changed -> load posts
+    filterChannel.addEventListener('change', async function() {
+        var pageId = filterChannel.value;
+        var platform = filterPlatform.value;
+        var labels = PLATFORM_CHANNEL_LABELS[platform] || { channel: 'Channel', post: 'Post' };
+        filterPost.innerHTML = '<option value="">All ' + labels.post + 's</option>';
+
+        if (pageId) {
+            postWrapper.style.display = '';
+            try {
+                var res = await fetch('/api/posts/by-page?page_id=' + pageId);
+                var data = await res.json();
+                data.posts.forEach(function(post) {
+                    var opt = document.createElement('option');
+                    opt.value = post.id;
+                    opt.textContent = post.caption;
+                    filterPost.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load posts:', e);
+            }
+        } else {
+            postWrapper.style.display = 'none';
+        }
+        updateClearButton();
+        navigateWithFilters();
+    });
+
+    // Post changed -> navigate
+    filterPost.addEventListener('change', function() {
+        updateClearButton();
+        navigateWithFilters();
+    });
+
+    // Clear all filters
+    clearBtn.addEventListener('click', function() {
+        filterPlatform.value = '';
+        filterChannel.innerHTML = '<option value="">All Channels</option>';
+        filterPost.innerHTML = '<option value="">All Posts</option>';
+        channelWrapper.style.display = 'none';
+        postWrapper.style.display = 'none';
+        updateClearButton();
+        navigateWithFilters();
+    });
+
+    // Restore cascading dropdowns on page load if filters are active
+    var savedPlatform = '{{ selected_platform }}';
+    var savedPageId = '{{ selected_page_id }}';
+    var savedPostId = '{{ selected_post_id }}';
+
+    async function restoreFilters() {
+        if (!savedPlatform) return;
+
+        var labels = PLATFORM_CHANNEL_LABELS[savedPlatform] || { channel: 'Channel', post: 'Post' };
+        channelLabel.textContent = labels.channel;
+        postLabel.textContent = labels.post;
+        filterChannel.querySelector('option').textContent = 'All ' + labels.channel + 's';
+        filterPost.querySelector('option').textContent = 'All ' + labels.post + 's';
+        channelWrapper.style.display = '';
+
+        // Load channels for the saved platform
+        try {
+            var res = await fetch('/api/pages/by-platform?platform=' + savedPlatform);
+            var data = await res.json();
+            data.pages.forEach(function(page) {
+                var opt = document.createElement('option');
+                opt.value = page.id;
+                opt.textContent = page.page_name;
+                if (savedPageId && String(page.id) === savedPageId) opt.selected = true;
+                filterChannel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load channels:', e);
+        }
+
+        // If a channel was saved, load its posts
+        if (savedPageId) {
+            postWrapper.style.display = '';
+            try {
+                var res2 = await fetch('/api/posts/by-page?page_id=' + savedPageId);
+                var data2 = await res2.json();
+                data2.posts.forEach(function(post) {
+                    var opt = document.createElement('option');
+                    opt.value = post.id;
+                    opt.textContent = post.caption;
+                    if (savedPostId && String(post.id) === savedPostId) opt.selected = true;
+                    filterPost.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load posts:', e);
+            }
+        }
+    }
+
+    restoreFilters();
+})();
+
+// Load language dropdown options
+async function loadLanguages() {
+    try {
+        var res = await fetch('/api/languages');
+        var data = await res.json();
+        document.querySelectorAll('.translate-lang-select').forEach(function(select) {
+            data.languages.forEach(function(lang) {
+                var opt = document.createElement('option');
+                opt.value = lang.code;
+                opt.textContent = lang.name;
+                if (lang.code === 'en') opt.selected = true;
+                select.appendChild(opt);
+            });
+        });
+        // Also populate source language dropdowns (keep "Auto Detect" at top)
+        document.querySelectorAll('.source-lang-select').forEach(function(select) {
+            data.languages.forEach(function(lang) {
+                var opt = document.createElement('option');
+                opt.value = lang.code;
+                opt.textContent = lang.name;
+                select.appendChild(opt);
+            });
+        });
+    } catch (e) {
+        console.error('Failed to load languages:', e);
+    }
+}
+loadLanguages();
+
+async function translateComment(commentId) {
+    var langSelect = document.getElementById('target-lang-' + commentId);
+    var targetLang = langSelect ? langSelect.value : 'en';
+    if (!targetLang) {
+        showToast('Please select a target language.', 'warning');
+        return;
+    }
+    var srcSelect = document.getElementById('source-lang-' + commentId);
+    var sourceLang = srcSelect ? srcSelect.value : 'auto';
+    var btn = document.getElementById('translate-btn-' + commentId);
+    if (btn) setButtonLoading(btn, true);
+    try {
+        var data = await apiCall('/api/comments/' + commentId + '/translate', 'POST', { target_language: targetLang, source_language: sourceLang });
+        if (data.success) {
+            showToast('Translation complete.', 'success');
+            var container = document.getElementById('translation-result-' + commentId);
+            if (container) {
+                var detectedBadge = data.detected_language && data.detected_language !== 'unknown'
+                    ? '<span class="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Detected: ' + data.detected_language.charAt(0).toUpperCase() + data.detected_language.slice(1) + '</span>'
+                    : '';
+                container.innerHTML =
+                    '<div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 relative">' +
+                        '<button onclick="this.parentElement.remove()" class="absolute top-2 right-2 text-indigo-400 hover:text-indigo-700 p-0.5 leading-none text-lg" title="Dismiss">&times;</button>' +
+                        '<div class="flex items-center gap-2 mb-2">' +
+                            '<i class="fas fa-language text-indigo-600"></i>' +
+                            '<span class="text-sm font-medium text-indigo-800">Translation</span>' +
+                            detectedBadge +
+                        '</div>' +
+                        '<p class="text-sm text-indigo-700">' + data.translated_text + '</p>' +
+                    '</div>';
+            }
+        } else {
+            showToast(data.error || 'Failed to translate.', 'danger');
+        }
+    } catch (e) {
+        console.error('Translation error:', e);
+        showToast('Translation failed. Please try again.', 'danger');
+    } finally {
+        if (btn) setButtonLoading(btn, false);
+    }
+}
+</script>
+{% endblock %}

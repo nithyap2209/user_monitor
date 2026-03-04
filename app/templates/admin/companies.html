@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}Companies — Admin — User Monitor{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 gap-3">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Companies</h2>
+        <p class="text-sm text-gray-500 mt-1">Manage companies and their API keys</p>
+    </div>
+    <button onclick="document.getElementById('addCompanyModal').classList.remove('hidden')"
+            class="flex-shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center gap-1">
+        <i class="fas fa-plus"></i> <span class="hidden sm:inline">Add Company</span><span class="sm:hidden">Add</span>
+    </button>
+</div>
+
+{% if companies %}
+<div class="bg-white rounded-xl shadow-sm border">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm min-w-[600px]">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left font-medium text-gray-500">Name</th>
+                <th class="px-6 py-3 text-left font-medium text-gray-500">Slug</th>
+                <th class="px-6 py-3 text-left font-medium text-gray-500">Users</th>
+                <th class="px-6 py-3 text-left font-medium text-gray-500">Status</th>
+                <th class="px-6 py-3 text-left font-medium text-gray-500">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y">
+            {% for company in companies %}
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-3 font-medium text-gray-800 whitespace-nowrap">{{ company.name }}</td>
+                <td class="px-6 py-3 text-gray-500 whitespace-nowrap">{{ company.slug or '—' }}</td>
+                <td class="px-6 py-3">
+                    {% set user_count = company.users.count() %}
+                    {% if user_count > 0 %}
+                    <button onclick="toggleCompanyUsers({{ company.id }})" class="text-indigo-600 hover:underline font-medium">
+                        {{ user_count }} <i class="fas fa-chevron-down text-[10px] ml-0.5 transition-transform" id="chevron-{{ company.id }}"></i>
+                    </button>
+                    {% else %}
+                    <span class="text-gray-400">0</span>
+                    {% endif %}
+                </td>
+                <td class="px-6 py-3">
+                    <span class="text-xs px-2 py-0.5 rounded-full {{ 'bg-green-100 text-green-700' if company.is_active else 'bg-gray-100 text-gray-500' }}">
+                        {{ 'Active' if company.is_active else 'Inactive' }}
+                    </span>
+                </td>
+                <td class="px-6 py-3 whitespace-nowrap space-x-3">
+                    <a href="{{ url_for('admin.company_api_keys', company_id=company.id) }}"
+                       class="text-indigo-600 hover:underline text-xs">
+                        <i class="fas fa-key mr-1"></i> API Keys
+                    </a>
+                    <button onclick="openAddUserModal({{ company.id }}, '{{ company.name }}')"
+                            class="text-indigo-600 hover:underline text-xs">
+                        <i class="fas fa-user-plus mr-1"></i> Add User
+                    </button>
+                </td>
+            </tr>
+            <!-- Expandable users row -->
+            <tr id="users-row-{{ company.id }}" class="hidden">
+                <td colspan="5" class="px-6 py-0">
+                    <div class="py-3 pl-4 border-l-2 border-indigo-200 ml-2">
+                        {% for user in company.users %}
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2 {{ 'border-b border-gray-100' if not loop.last }}">
+                            <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                                <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold flex-shrink-0">{{ user.initials }}</div>
+                                <div class="min-w-0">
+                                    <span class="text-sm font-medium text-gray-700">{{ user.full_name }}</span>
+                                    <span class="text-xs text-gray-400 ml-1 truncate">{{ user.email }}</span>
+                                </div>
+                                {% if user.designation %}
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ user.designation.name }}</span>
+                                {% endif %}
+                                {% if not user.email_verified %}
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-600">Unverified</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button onclick="openEditUserModal(this)"
+                                        data-id="{{ user.id }}"
+                                        data-name="{{ user.full_name }}"
+                                        data-email="{{ user.email }}"
+                                        data-designation="{{ user.designation_id or '' }}"
+                                        data-verified="{{ '1' if user.email_verified else '0' }}"
+                                        class="text-xs text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition inline-flex items-center gap-1">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" onsubmit="return false;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="redirect_to" value="companies">
+                                    <button type="button"
+                                            onclick="confirmFormSubmit(this.closest('form'), {title:'Delete User', message:'Delete {{ user.full_name }} ({{ user.email }})? This cannot be undone.', confirmText:'Delete', type:'danger'})"
+                                            class="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded transition inline-flex items-center gap-1">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% else %}
+{% with icon='building', title='No companies', message='Add your first company to get started.' %}
+{% include 'components/empty_state.html' %}
+{% endwith %}
+{% endif %}
+
+<!-- Add Company Modal -->
+<div id="addCompanyModal" class="fixed inset-0 z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40" onclick="document.getElementById('addCompanyModal').classList.add('hidden')"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold">Add Company</h3>
+                <button onclick="document.getElementById('addCompanyModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_company') }}" class="px-6 py-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input type="text" name="name" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <button type="submit" class="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Create Company
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="fixed inset-0 z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40" onclick="document.getElementById('addUserModal').classList.add('hidden')"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold">Add User — <span id="addUserCompanyName"></span></h3>
+                <button onclick="document.getElementById('addUserModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form method="POST" action="{{ url_for('admin.add_user') }}" class="px-6 py-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="company_id" id="addUserCompanyId">
+                <input type="hidden" name="redirect_to" value="companies">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="full_name" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" name="password" id="companyAddUserPassword" required minlength="6" class="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <button type="button" title="Toggle password visibility" onclick="togglePassword('companyAddUserPassword', this)" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                    <select name="designation_id" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <option value="">— None —</option>
+                        {% for d in designations %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" name="email_verified" checked
+                               class="mr-2 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500">
+                        <span class="font-medium">Skip email verification</span>
+                    </label>
+                    <p class="text-xs text-gray-400 mt-1 ml-6">User can log in immediately without verifying their email</p>
+                </div>
+                <button type="submit" class="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Create User
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="fixed inset-0 z-40 hidden">
+    <div class="absolute inset-0 bg-black bg-opacity-40" onclick="document.getElementById('editUserModal').classList.add('hidden')"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h3 class="text-lg font-semibold">Edit User</h3>
+                <button onclick="document.getElementById('editUserModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editUserForm" method="POST" class="px-6 py-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="redirect_to" value="companies">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="full_name" id="editFullName" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" id="editEmail" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password <span class="text-xs text-gray-400 font-normal">(leave blank to keep current)</span></label>
+                    <div class="relative">
+                        <input type="password" name="password" id="editUserPassword" class="w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="••••••••">
+                        <button type="button" title="Toggle password visibility" onclick="togglePassword('editUserPassword', this)" class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                    <select name="designation_id" id="editDesignation" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                        <option value="">— None —</option>
+                        {% for d in designations %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" name="email_verified" id="editEmailVerified"
+                               class="mr-2 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500">
+                        <span class="font-medium">Email verified</span>
+                    </label>
+                    <p class="text-xs text-gray-400 mt-1 ml-6">User can log in without email verification</p>
+                </div>
+                <button type="submit" class="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Update User
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openAddUserModal(companyId, companyName) {
+    document.getElementById('addUserCompanyId').value = companyId;
+    document.getElementById('addUserCompanyName').textContent = companyName;
+    document.getElementById('addUserModal').classList.remove('hidden');
+}
+
+function openEditUserModal(btn) {
+    document.getElementById('editUserForm').action = '/admin/users/' + btn.dataset.id + '/edit';
+    document.getElementById('editFullName').value = btn.dataset.name;
+    document.getElementById('editEmail').value = btn.dataset.email;
+    document.getElementById('editUserPassword').value = '';
+    document.getElementById('editDesignation').value = btn.dataset.designation || '';
+    document.getElementById('editEmailVerified').checked = btn.dataset.verified === '1';
+    document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+function toggleCompanyUsers(companyId) {
+    var row = document.getElementById('users-row-' + companyId);
+    var chevron = document.getElementById('chevron-' + companyId);
+    row.classList.toggle('hidden');
+    chevron.classList.toggle('rotate-180');
+}
+
+function togglePassword(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

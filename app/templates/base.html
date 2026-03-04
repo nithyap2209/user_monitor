@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}User Monitor{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% block head %}{% endblock %}
+    <style>
+        /* Toast slide-in animation */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-slide-in {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+        .toast-fade-out {
+            animation: fadeOut 0.4s ease-in forwards;
+        }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+
+    <!-- Full page loader -->
+    <div id="page-loader" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex items-center justify-center transition-opacity duration-300">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p class="text-sm text-gray-500 font-medium">Loading...</p>
+        </div>
+    </div>
+
+    {% include 'components/toast.html' %}
+
+    <!-- Global Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-[10000] hidden">
+        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" id="confirmOverlay"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all scale-95 opacity-0" id="confirmBox">
+                <div class="p-6">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" id="confirmIconWrap">
+                            <i id="confirmIcon" class="text-xl"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-800" id="confirmTitle">Confirm</h3>
+                            <p class="text-sm text-gray-500 mt-1" id="confirmMessage"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-2xl border-t">
+                    <button id="confirmCancel"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button id="confirmOk"
+                            class="px-4 py-2 text-sm font-medium text-white rounded-lg transition">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/60 z-30 hidden md:hidden"></div>
+
+    <!-- Global Reply Modal -->
+    <div id="replyModal" class="fixed inset-0 z-[10000] hidden">
+        <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" id="replyOverlay"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all scale-95 opacity-0" id="replyBox">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-reply text-indigo-600"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Write a Reply</h3>
+                                <p class="text-sm text-gray-500" id="replyToLabel"></p>
+                            </div>
+                        </div>
+                        <button type="button" id="replyCloseBtn" title="Close"
+                                class="text-gray-400 hover:text-gray-600 transition p-1.5 rounded-lg hover:bg-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <textarea id="replyTextarea" rows="4"
+                              placeholder="Type your reply here... (Ctrl+Enter to send)"
+                              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-none"></textarea>
+                    <p class="text-xs text-gray-400 mt-1.5" id="replyCharCount">0 characters</p>
+                </div>
+                <div class="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-2xl border-t">
+                    <button id="replyCancelBtn"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button id="replySendBtn"
+                            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition inline-flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Send Reply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="flex h-full">
+        {% include 'components/sidebar.html' %}
+        <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
+            {% include 'components/navbar.html' %}
+            <main class="flex-1 overflow-y-auto p-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+    <main>
+        {% block auth_content %}{% endblock %}
+    </main>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    <script>
+        // Hide page loader when window finishes loading
+        function hidePageLoader() {
+            var loader = document.getElementById('page-loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(function() {
+                    loader.style.display = 'none';
+                }, 300);
+            }
+        }
+        window.addEventListener('load', hidePageLoader);
+
+        // Also hide loader on back/forward navigation (bfcache restore)
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) hidePageLoader();
+        });
+
+        // Show page loader on internal link clicks (not anchors, not new tabs)
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('a');
+            if (link &&
+                link.href &&
+                !link.href.startsWith('#') &&
+                !link.href.startsWith('javascript:') &&
+                !link.target &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.shiftKey &&
+                link.hostname === window.location.hostname) {
+                var loader = document.getElementById('page-loader');
+                if (loader) {
+                    loader.style.display = 'flex';
+                    loader.style.opacity = '1';
+                }
+            }
+        });
+
+        // Show page loader on form submissions (only if not prevented)
+        document.addEventListener('submit', function(e) {
+            setTimeout(function() {
+                if (!e.defaultPrevented) {
+                    var loader = document.getElementById('page-loader');
+                    if (loader) {
+                        loader.style.display = 'flex';
+                        loader.style.opacity = '1';
+                    }
+                }
+            }, 0);
+        });
+
+        // Global reply modal
+        // Usage: const text = await showReplyModal({ authorName: 'John' });
+        // Returns the reply text string, or null if cancelled.
+        function showReplyModal(opts) {
+            opts = opts || {};
+            var modal = document.getElementById('replyModal');
+            var box = document.getElementById('replyBox');
+            var overlay = document.getElementById('replyOverlay');
+            var toLabel = document.getElementById('replyToLabel');
+            var textarea = document.getElementById('replyTextarea');
+            var charCount = document.getElementById('replyCharCount');
+            var sendBtn = document.getElementById('replySendBtn');
+            var cancelBtn = document.getElementById('replyCancelBtn');
+            var closeBtn = document.getElementById('replyCloseBtn');
+
+            toLabel.textContent = opts.authorName ? 'Replying to ' + opts.authorName : '';
+            textarea.value = '';
+            charCount.textContent = '0 characters';
+            textarea.classList.remove('border-red-400');
+
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function() {
+                box.style.opacity = '1';
+                box.style.transform = 'scale(1)';
+            });
+            setTimeout(function() { textarea.focus(); }, 150);
+
+            function onInput() {
+                var len = textarea.value.length;
+                charCount.textContent = len + ' character' + (len !== 1 ? 's' : '');
+                textarea.classList.remove('border-red-400');
+            }
+            textarea.addEventListener('input', onInput);
+
+            return new Promise(function(resolve) {
+                function onSend() {
+                    var text = textarea.value.trim();
+                    if (!text) {
+                        textarea.classList.add('border-red-400');
+                        textarea.focus();
+                        return;
+                    }
+                    cleanup();
+                    resolve(text);
+                }
+                function onCancel() {
+                    cleanup();
+                    resolve(null);
+                }
+                function onKeydown(e) {
+                    if (e.key === 'Escape') { onCancel(); }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { onSend(); }
+                }
+                function cleanup() {
+                    box.style.opacity = '0';
+                    box.style.transform = 'scale(0.95)';
+                    setTimeout(function() { modal.classList.add('hidden'); }, 200);
+                    sendBtn.removeEventListener('click', onSend);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    closeBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onCancel);
+                    textarea.removeEventListener('input', onInput);
+                    textarea.removeEventListener('keydown', onKeydown);
+                }
+                textarea.addEventListener('keydown', onKeydown);
+                sendBtn.addEventListener('click', onSend);
+                cancelBtn.addEventListener('click', onCancel);
+                closeBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onCancel);
+            });
+        }
+
+        // Helper: show confirm modal then submit a form if confirmed
+        async function confirmFormSubmit(form, opts) {
+            var ok = await showConfirm(opts);
+            if (ok) form.submit();
+        }
+
+        // Global confirm modal
+        // Usage: var ok = await showConfirm({ title, message, confirmText, type })
+        // type: 'danger' (red), 'warning' (amber), 'info' (indigo)
+        function showConfirm(opts) {
+            opts = opts || {};
+            var modal = document.getElementById('confirmModal');
+            var box = document.getElementById('confirmBox');
+            var overlay = document.getElementById('confirmOverlay');
+            var iconWrap = document.getElementById('confirmIconWrap');
+            var icon = document.getElementById('confirmIcon');
+            var title = document.getElementById('confirmTitle');
+            var message = document.getElementById('confirmMessage');
+            var okBtn = document.getElementById('confirmOk');
+            var cancelBtn = document.getElementById('confirmCancel');
+
+            var type = opts.type || 'info';
+            var colors = {
+                danger:  { bg: 'bg-red-100',  text: 'text-red-600',  btn: 'bg-red-600 hover:bg-red-700',  icon: 'fas fa-exclamation-triangle' },
+                warning: { bg: 'bg-amber-100', text: 'text-amber-600', btn: 'bg-amber-600 hover:bg-amber-700', icon: 'fas fa-exclamation-circle' },
+                info:    { bg: 'bg-indigo-100',  text: 'text-indigo-600',  btn: 'bg-indigo-600 hover:bg-indigo-700',  icon: 'fas fa-info-circle' },
+            };
+            var c = colors[type] || colors.info;
+
+            title.textContent = opts.title || 'Confirm';
+            message.textContent = opts.message || 'Are you sure?';
+            okBtn.textContent = opts.confirmText || 'Confirm';
+            cancelBtn.textContent = opts.cancelText || 'Cancel';
+            iconWrap.className = 'w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ' + c.bg;
+            icon.className = c.icon + ' text-xl ' + c.text;
+            okBtn.className = 'px-4 py-2 text-sm font-medium text-white rounded-lg transition ' + c.btn;
+
+            modal.classList.remove('hidden');
+            requestAnimationFrame(function() {
+                box.style.opacity = '1';
+                box.style.transform = 'scale(1)';
+            });
+
+            return new Promise(function(resolve) {
+                function close(result) {
+                    box.style.opacity = '0';
+                    box.style.transform = 'scale(0.95)';
+                    setTimeout(function() {
+                        modal.classList.add('hidden');
+                    }, 200);
+                    okBtn.removeEventListener('click', onOk);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onCancel);
+                    resolve(result);
+                }
+                function onOk() { close(true); }
+                function onCancel() { close(false); }
+                okBtn.addEventListener('click', onOk);
+                cancelBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onCancel);
+            });
+        }
+
+        // ── Mobile Sidebar Toggle ────────────────────────────────
+        (function() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebar-overlay');
+            var toggleBtn = document.getElementById('sidebar-toggle');
+            var closeBtn = document.getElementById('sidebar-close');
+
+            function openSidebar() {
+                if (!sidebar) return;
+                sidebar.classList.remove('-translate-x-full');
+                if (overlay) overlay.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+            function closeSidebar() {
+                if (!sidebar) return;
+                sidebar.classList.add('-translate-x-full');
+                if (overlay) overlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if (overlay) overlay.addEventListener('click', closeSidebar);
+
+            // Close sidebar on nav link click (mobile only)
+            if (sidebar) {
+                sidebar.querySelectorAll('a').forEach(function(link) {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth < 768) closeSidebar();
+                    });
+                });
+            }
+        })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

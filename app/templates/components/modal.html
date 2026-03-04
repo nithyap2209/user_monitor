@@ -1,0 +1,52 @@
+<!-- Reusable modal component - use with openModal('id') / closeModal('id') -->
+<div id="{{ modal_id | default('modal') }}" class="fixed inset-0 z-[9000] hidden" aria-modal="true" role="dialog">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200"
+         onclick="closeModal('{{ modal_id | default('modal') }}')"></div>
+
+    <!-- Modal panel -->
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-all duration-200">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900" id="{{ modal_id | default('modal') }}-title">Modal Title</h3>
+                <button onclick="closeModal('{{ modal_id | default('modal') }}')"
+                        class="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors duration-150">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Body -->
+            <div class="px-6 py-4" id="{{ modal_id | default('modal') }}-body">
+                <!-- Modal content injected here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var openModals = document.querySelectorAll('.fixed[aria-modal="true"]:not(.hidden)');
+            openModals.forEach(function(modal) {
+                closeModal(modal.id);
+            });
+        }
+    });
+</script>

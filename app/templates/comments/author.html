@@ -1,0 +1,582 @@
+{% extends 'base.html' %}
+{% block title %}{{ author_name }} — User Monitor — User Monitor{% endblock %}
+
+{% block content %}
+<!-- Back link -->
+<div class="mb-6">
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 hover:underline transition">
+        <i class="fas fa-arrow-left text-xs"></i> Back
+    </a>
+</div>
+
+<!-- User Monitor Header Card -->
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <!-- Avatar + Info -->
+        <div class="flex items-start gap-4 flex-1 min-w-0">
+            <div class="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-600 flex-shrink-0">
+                {{ (author_name or '?')[0] | upper }}
+            </div>
+            <div class="min-w-0">
+                <p class="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-0.5">User Monitor</p>
+                <h2 class="text-xl font-bold text-gray-800 truncate">{{ author_name }}</h2>
+                {% if platform_author_id %}
+                <p class="text-xs text-gray-400 font-mono mt-0.5 truncate">ID: {{ platform_author_id }}</p>
+                {% endif %}
+                <div class="flex flex-wrap items-center gap-2 mt-1 text-sm text-gray-500">
+                    {% for p in stats.platforms_active %}
+                    {% set url = profile_url(p, author_platform_ids.get(p), author_name) %}
+                    {% if url %}
+                    <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-1 hover:text-indigo-600 transition"
+                       title="View profile on {{ platform_labels.get(p, p) }}">
+                        <i class="fab fa-{{ p }}"></i> {{ platform_labels.get(p, p) }}
+                        <i class="fas fa-external-link-alt text-[9px] ml-0.5"></i>
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1">
+                        <i class="fab fa-{{ p }}"></i> {{ platform_labels.get(p, p) }}
+                    </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% if stats.first_comment and stats.last_comment %}
+                <p class="text-xs text-gray-400 mt-1">
+                    Active from {{ stats.first_comment.strftime('%b %d, %Y') }} to {{ stats.last_comment.strftime('%b %d, %Y') }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Re-analyze Button -->
+        <button id="reanalyzeBtn" onclick="reanalyzeAuthor()"
+                class="w-full sm:w-auto flex-shrink-0 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition inline-flex items-center justify-center gap-2">
+            <i class="fas fa-brain"></i> Re-analyze with AI
+        </button>
+    </div>
+</div>
+
+<!-- Stats Cards Row -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Comments</p>
+                <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.total_comments }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                <i class="fas fa-comments text-blue-500"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Likes</p>
+                <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.total_likes }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center">
+                <i class="fas fa-heart text-rose-500"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Posts Interacted</p>
+                <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.posts_count }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+                <i class="fas fa-newspaper text-green-500"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Platforms</p>
+                <p class="text-2xl font-bold text-gray-800 mt-1">{{ stats.platforms_active | length }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <i class="fas fa-globe text-indigo-500"></i>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Contact Info</p>
+                <p class="text-2xl font-bold mt-1 {{ 'text-blue-600' if stats.has_contact_info else 'text-gray-400' }}">
+                    {{ 'Yes' if stats.has_contact_info else 'No' }}
+                </p>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <i class="fas fa-address-card text-indigo-500"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Sentiment Doughnut Chart -->
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+        <h3 class="text-sm font-semibold text-gray-700 mb-4">Sentiment Breakdown</h3>
+        <div class="chart-skeleton animate-pulse" id="sentimentSkeleton">
+            <div class="h-64 bg-gray-100 rounded-lg"></div>
+        </div>
+        <div class="relative h-64 sm:h-72" id="sentimentChartWrapper" style="display:none;">
+            <canvas id="authorSentimentChart"></canvas>
+        </div>
+        <div id="sentimentEmpty" class="hidden text-center py-12 text-gray-400">
+            <i class="fas fa-chart-pie text-3xl mb-3"></i>
+            <p class="text-sm">No sentiment data available</p>
+        </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="bg-white rounded-xl shadow-sm border p-6">
+        <h3 class="text-sm font-semibold text-gray-700 mb-4">Activity Over Time</h3>
+        <div class="chart-skeleton animate-pulse" id="timelineSkeleton">
+            <div class="h-64 bg-gray-100 rounded-lg"></div>
+        </div>
+        <div class="h-64 sm:h-72" id="timelineChartWrapper" style="display:none;">
+            <canvas id="authorTimelineChart"></canvas>
+        </div>
+        <div id="timelineEmpty" class="hidden text-center py-12 text-gray-400">
+            <i class="fas fa-chart-line text-3xl mb-3"></i>
+            <p class="text-sm">No timeline data available</p>
+        </div>
+    </div>
+</div>
+
+<!-- Sentiment Summary Badges -->
+<div class="bg-white rounded-xl shadow-sm border p-5 mb-6">
+    <h3 class="text-sm font-semibold text-gray-700 mb-3">Sentiment Summary</h3>
+    <div class="flex flex-wrap items-center gap-3">
+        {# All button — default active #}
+        <button type="button" onclick="filterPostsBySentiment('all')" data-sentiment-filter="all"
+                class="sentiment-filter-btn ring-2 ring-indigo-400 ring-offset-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-gray-100 border border-gray-300 hover:bg-gray-200 transition focus:outline-none">
+            <span class="font-medium text-gray-700">{{ stats.total_comments }}</span>
+            <span class="text-gray-500">All</span>
+        </button>
+        {% for s in sentiment_types %}
+        <button type="button" onclick="filterPostsBySentiment('{{ s }}')" data-sentiment-filter="{{ s }}"
+                class="sentiment-filter-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
+            {% if s == 'positive' %}bg-emerald-50 border border-emerald-200 hover:bg-emerald-100
+            {% elif s == 'negative' %}bg-rose-50 border border-rose-200 hover:bg-rose-100
+            {% elif s == 'lead' %}bg-blue-50 border border-blue-200 hover:bg-blue-100
+            {% elif s == 'business' %}bg-indigo-50 border border-indigo-200 hover:bg-indigo-100
+            {% else %}bg-gray-50 border border-gray-200 hover:bg-gray-100{% endif %} transition focus:outline-none">
+            <span class="font-medium
+                {% if s == 'positive' %}text-emerald-700
+                {% elif s == 'negative' %}text-rose-700
+                {% elif s == 'lead' %}text-blue-700
+                {% elif s == 'business' %}text-indigo-700
+                {% else %}text-gray-700{% endif %}">
+                {{ stats.sentiment_counts.get(s, 0) }}
+            </span>
+            <span class="{% if s == 'positive' %}text-emerald-600
+                {% elif s == 'negative' %}text-rose-600
+                {% elif s == 'lead' %}text-blue-600
+                {% elif s == 'business' %}text-indigo-600
+                {% else %}text-gray-500{% endif %}">{{ s | capitalize }}</span>
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Posts Interacted Section (unified: commented + liked) -->
+{% set reacted_ids = posts_reacted | map(attribute='id') | list %}
+{% set ns = namespace(commented_post_ids=[]) %}
+<div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+        <h3 class="text-sm font-semibold text-gray-700">
+            Posts Interacted
+            <span class="ml-1 text-gray-400 font-normal" id="postsInteractedCount">({{ stats.posts_count }})</span>
+        </h3>
+        {% if posts_commented or posts_reacted %}
+        <div class="relative">
+            <input type="text" id="postSearchInput" placeholder="Search posts..."
+                   oninput="filterInteractedPosts(this.value)"
+                   class="w-full sm:w-48 pl-8 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+        </div>
+        {% endif %}
+    </div>
+    {% if posts_commented or posts_reacted %}
+    <div class="space-y-4" id="postsInteractedList">
+
+        {# ── Posts the user commented on (show all their comments) ── #}
+        {% for post in posts_commented %}
+        {% set ns.commented_post_ids = ns.commented_post_ids + [post.id] %}
+        {% set post_comments = comments_by_post.get(post.id, []) %}
+        {% set is_liked = post.id in reacted_ids %}
+        {% set sentiment_ns = namespace(vals=[]) %}
+        {% for c in post_comments %}{% if c.sentiment and c.sentiment not in sentiment_ns.vals %}{% set sentiment_ns.vals = sentiment_ns.vals + [c.sentiment] %}{% endif %}{% endfor %}
+        <div class="rounded-xl border overflow-hidden interacted-post-card"
+             data-caption="{{ (post.caption or '') | lower }}{{ (' ' ~ post.connected_page.page_name | lower) if post.connected_page else '' }}"
+             data-sentiments="{{ sentiment_ns.vals | join(',') }}">
+            <!-- Post header -->
+            <div class="p-3 bg-gray-50/60 border-b">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                        {% if post.platform == 'facebook' %}bg-blue-50
+                        {% elif post.platform == 'instagram' %}bg-pink-50
+                        {% elif post.platform == 'youtube' %}bg-red-50
+                        {% elif post.platform == 'linkedin' %}bg-sky-50
+                        {% elif post.platform == 'twitter' %}bg-gray-100
+                        {% else %}bg-gray-100{% endif %}">
+                        <i class="fab fa-{{ post.platform }}
+                            {% if post.platform == 'facebook' %}text-blue-600
+                            {% elif post.platform == 'instagram' %}text-pink-500
+                            {% elif post.platform == 'youtube' %}text-red-600
+                            {% elif post.platform == 'linkedin' %}text-blue-700
+                            {% elif post.platform == 'twitter' %}text-gray-800
+                            {% else %}text-gray-500{% endif %}"></i>
+                    </div>
+                    {% if post.thumbnail_url or post.media_url %}
+                    <img src="{{ post.thumbnail_url or post.media_url }}" alt="" class="w-9 h-9 rounded object-cover flex-shrink-0">
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-700 truncate">{{ post.caption[:100] if post.caption else '(No caption)' }}</p>
+                        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span class="text-xs text-gray-400">{{ platform_labels.get(post.platform, post.platform) }}</span>
+                            {% if post.connected_page %}
+                            <span class="text-xs text-gray-300">&middot;</span>
+                            <span class="text-xs text-gray-400"><i class="fas fa-flag text-[10px]"></i> {{ post.connected_page.page_name }}</span>
+                            {% endif %}
+                            {% if post.posted_at %}
+                            <span class="text-xs text-gray-300">&middot;</span>
+                            <span class="text-xs text-gray-400">{{ post.posted_at.strftime('%b %d, %Y') }}</span>
+                            {% endif %}
+                            {% if is_liked %}
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-500 border border-rose-100">
+                                <i class="fas fa-heart text-[9px]"></i> Liked
+                            </span>
+                            {% endif %}
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                <i class="fas fa-comment text-[9px]"></i> {{ post_comments | length }} comment{{ 's' if post_comments | length != 1 else '' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Action buttons -->
+                <div class="flex items-center gap-1.5 mt-2 ml-12">
+                    {% if post.permalink %}
+                    <a href="{{ post.permalink }}" target="_blank" rel="noopener noreferrer"
+                       class="px-2.5 py-1.5 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition
+                           {% if post.platform == 'facebook' %}text-blue-600 bg-blue-50 hover:bg-blue-100
+                           {% elif post.platform == 'instagram' %}text-pink-600 bg-pink-50 hover:bg-pink-100
+                           {% elif post.platform == 'youtube' %}text-red-600 bg-red-50 hover:bg-red-100
+                           {% elif post.platform == 'linkedin' %}text-blue-700 bg-sky-50 hover:bg-sky-100
+                           {% else %}text-gray-600 bg-gray-50 hover:bg-gray-100{% endif %}">
+                        <i class="fab fa-{{ post.platform }}"></i> Open
+                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('posts.detail', post_id=post.id) }}"
+                       class="px-2.5 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                </div>
+            </div>
+            <!-- All comments by this user on this post -->
+            {% if post_comments %}
+            <div class="px-4 py-3 space-y-3">
+                {% for c in post_comments %}
+                <div class="pl-3 border-l-2 border-indigo-200 post-comment-row" data-sentiment="{{ c.sentiment or 'neutral' }}">
+                    <div class="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <span class="text-xs font-medium text-gray-800">{{ c.display_name }}</span>
+                        {% if c.sentiment %}
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium
+                            {% if c.sentiment == 'positive' %}bg-emerald-100 text-emerald-700
+                            {% elif c.sentiment == 'negative' %}bg-rose-100 text-rose-700
+                            {% elif c.sentiment == 'lead' %}bg-blue-100 text-blue-700
+                            {% elif c.sentiment == 'business' %}bg-indigo-100 text-indigo-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {{ c.sentiment | capitalize }}
+                        </span>
+                        {% endif %}
+                        {% if c.commented_at %}
+                        <span class="text-[10px] text-gray-400 ml-auto">{{ c.commented_at.strftime('%b %d, %Y %H:%M') }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-sm text-gray-700">{{ c.comment_text }}</p>
+                    {% if c.likes_count %}
+                    <p class="text-[10px] text-gray-400 mt-1"><i class="fas fa-thumbs-up mr-0.5"></i>{{ c.likes_count }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {# ── Liked-only posts (no comments by this user) ── #}
+        {% for post in posts_reacted %}
+        {% if post.id not in ns.commented_post_ids %}
+        <div class="rounded-xl border overflow-hidden interacted-post-card"
+             data-caption="{{ (post.caption or '') | lower }}{{ (' ' ~ post.connected_page.page_name | lower) if post.connected_page else '' }}"
+             data-sentiments="liked">
+            <div class="p-3 bg-gray-50/60">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
+                        {% if post.platform == 'facebook' %}bg-blue-50
+                        {% elif post.platform == 'instagram' %}bg-pink-50
+                        {% elif post.platform == 'youtube' %}bg-red-50
+                        {% elif post.platform == 'linkedin' %}bg-sky-50
+                        {% elif post.platform == 'twitter' %}bg-gray-100
+                        {% else %}bg-gray-100{% endif %}">
+                        <i class="fab fa-{{ post.platform }}
+                            {% if post.platform == 'facebook' %}text-blue-600
+                            {% elif post.platform == 'instagram' %}text-pink-500
+                            {% elif post.platform == 'youtube' %}text-red-600
+                            {% elif post.platform == 'linkedin' %}text-blue-700
+                            {% elif post.platform == 'twitter' %}text-gray-800
+                            {% else %}text-gray-500{% endif %}"></i>
+                    </div>
+                    {% if post.thumbnail_url or post.media_url %}
+                    <img src="{{ post.thumbnail_url or post.media_url }}" alt="" class="w-9 h-9 rounded object-cover flex-shrink-0">
+                    {% endif %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-700 truncate">{{ post.caption[:100] if post.caption else '(No caption)' }}</p>
+                        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span class="text-xs text-gray-400">{{ platform_labels.get(post.platform, post.platform) }}</span>
+                            {% if post.connected_page %}
+                            <span class="text-xs text-gray-300">&middot;</span>
+                            <span class="text-xs text-gray-400"><i class="fas fa-flag text-[10px]"></i> {{ post.connected_page.page_name }}</span>
+                            {% endif %}
+                            {% if post.posted_at %}
+                            <span class="text-xs text-gray-300">&middot;</span>
+                            <span class="text-xs text-gray-400">{{ post.posted_at.strftime('%b %d, %Y') }}</span>
+                            {% endif %}
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-500 border border-rose-100">
+                                <i class="fas fa-heart text-[9px]"></i> Liked
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Action buttons -->
+                <div class="flex items-center gap-1.5 mt-2 ml-12">
+                    {% if post.permalink %}
+                    <a href="{{ post.permalink }}" target="_blank" rel="noopener noreferrer"
+                       class="px-2.5 py-1.5 text-xs font-medium rounded-lg inline-flex items-center gap-1.5 transition
+                           {% if post.platform == 'facebook' %}text-blue-600 bg-blue-50 hover:bg-blue-100
+                           {% elif post.platform == 'instagram' %}text-pink-600 bg-pink-50 hover:bg-pink-100
+                           {% elif post.platform == 'youtube' %}text-red-600 bg-red-50 hover:bg-red-100
+                           {% elif post.platform == 'linkedin' %}text-blue-700 bg-sky-50 hover:bg-sky-100
+                           {% else %}text-gray-600 bg-gray-50 hover:bg-gray-100{% endif %}">
+                        <i class="fab fa-{{ post.platform }}"></i> Open
+                        <i class="fas fa-external-link-alt text-[10px]"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('posts.detail', post_id=post.id) }}"
+                       class="px-2.5 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+    </div>
+    <p id="noPostSearchResults" class="hidden text-center text-sm text-gray-400 py-6">No posts match your search.</p>
+    {% else %}
+    <p class="text-sm text-gray-400 text-center py-6">No posts found for this user.</p>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SENTIMENT_COLORS = {
+    positive: '#10b981',
+    negative: '#f43f5e',
+    neutral: '#6b7280',
+    lead: '#3b82f6',
+    business: '#8b5cf6',
+};
+const SENTIMENT_LABELS = {
+    positive: 'Positive',
+    negative: 'Negative',
+    neutral: 'Neutral',
+    lead: 'Lead',
+    business: 'Business',
+};
+
+const authorName = {{ author_name | tojson }};
+let sentimentChart = null;
+let timelineChart = null;
+
+async function loadCharts() {
+    try {
+        var res = await fetch('/api/author/' + encodeURIComponent(authorName) + '/sentiment');
+        var data = await res.json();
+
+        // Sentiment Doughnut
+        var sentimentData = data.sentiment || {};
+        var sentLabels = Object.keys(sentimentData);
+        var sentValues = Object.values(sentimentData);
+
+        document.getElementById('sentimentSkeleton').style.display = 'none';
+        if (sentLabels.length > 0 && sentValues.some(function(v) { return v > 0; })) {
+            document.getElementById('sentimentChartWrapper').style.display = 'block';
+            var ctx = document.getElementById('authorSentimentChart').getContext('2d');
+            sentimentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: sentLabels.map(function(l) { return SENTIMENT_LABELS[l] || l; }),
+                    datasets: [{
+                        data: sentValues,
+                        backgroundColor: sentLabels.map(function(l) { return SENTIMENT_COLORS[l] || '#6b7280'; }),
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, font: { size: 11 } } },
+                    },
+                    cutout: '60%',
+                }
+            });
+        } else {
+            document.getElementById('sentimentEmpty').classList.remove('hidden');
+        }
+
+        // Timeline Line Chart
+        var timelineData = data.timeline || {};
+        var tlDates = Object.keys(timelineData).sort();
+        var tlCounts = tlDates.map(function(d) { return timelineData[d]; });
+
+        document.getElementById('timelineSkeleton').style.display = 'none';
+        if (tlDates.length > 0) {
+            document.getElementById('timelineChartWrapper').style.display = 'block';
+            var ctx2 = document.getElementById('authorTimelineChart').getContext('2d');
+            timelineChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: tlDates,
+                    datasets: [{
+                        label: 'Comments',
+                        data: tlCounts,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    }
+                }
+            });
+        } else {
+            document.getElementById('timelineEmpty').classList.remove('hidden');
+        }
+    } catch (e) {
+        console.error('Failed to load author charts:', e);
+    }
+}
+
+async function reanalyzeAuthor() {
+    var btn = document.getElementById('reanalyzeBtn');
+    var ok = await showConfirm({
+        title: 'Re-analyze with AI',
+        message: 'Re-analyze all comments by this author using AI? This may take a moment.',
+        confirmText: 'Re-analyze',
+        type: 'info',
+    });
+    if (!ok) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    try {
+        var data = await apiCall('/api/author/' + encodeURIComponent(authorName) + '/reanalyze', 'POST');
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            showToast(data.error || 'Re-analysis failed.', 'danger');
+        }
+    } catch (e) {
+        showToast('Re-analysis failed. Check your API key.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-brain"></i> Re-analyze with AI';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadCharts);
+
+function filterPostsBySentiment(filter) {
+    var cards = document.querySelectorAll('.interacted-post-card');
+    var shown = 0;
+
+    cards.forEach(function(card) {
+        var sentiments = card.dataset.sentiments || '';
+        var visible = (filter === 'all') || sentiments.split(',').indexOf(filter) !== -1;
+        card.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+
+        // Within each visible post card, hide comments that don't match the filter
+        card.querySelectorAll('.post-comment-row').forEach(function(row) {
+            if (filter === 'all') {
+                row.style.display = '';
+            } else {
+                row.style.display = (row.dataset.sentiment === filter) ? '' : 'none';
+            }
+        });
+    });
+
+    // Update count
+    var countEl = document.getElementById('postsInteractedCount');
+    if (countEl) countEl.textContent = '(' + shown + ')';
+
+    // No results message
+    var noResults = document.getElementById('noPostSearchResults');
+    if (noResults) noResults.classList.toggle('hidden', shown > 0);
+
+    // Highlight active button
+    document.querySelectorAll('.sentiment-filter-btn').forEach(function(btn) {
+        var isActive = btn.dataset.sentimentFilter === filter;
+        btn.classList.toggle('ring-2', isActive);
+        btn.classList.toggle('ring-indigo-400', isActive);
+        btn.classList.toggle('ring-offset-1', isActive);
+    });
+
+    // Reset text search
+    var searchInput = document.getElementById('postSearchInput');
+    if (searchInput) searchInput.value = '';
+}
+
+function filterInteractedPosts(query) {
+    var cards = document.querySelectorAll('.interacted-post-card');
+    var shown = 0;
+    var q = query.trim().toLowerCase();
+
+    cards.forEach(function(card) {
+        var caption = card.dataset.caption || '';
+        var visible = !q || caption.includes(q);
+        card.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+    });
+
+    var noResults = document.getElementById('noPostSearchResults');
+    if (noResults) noResults.classList.toggle('hidden', shown > 0 || cards.length === 0);
+
+    var countEl = document.getElementById('postsInteractedCount');
+    if (countEl) countEl.textContent = q ? '(' + shown + ')' : '(' + cards.length + ')';
+}
+</script>
+{% endblock %}
