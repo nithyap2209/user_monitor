@@ -129,9 +129,65 @@ def create_app(config_name=None):
     def server_error(e):
         return render_template("errors/500.html"), 500
 
-    # Create tables in dev
+    # Create all tables and seed default admin on first run
     with app.app_context():
         from app.models import register_models
         register_models()
+        db.create_all()
+        _seed_defaults(app)
 
     return app
+
+
+def _seed_defaults(app):
+    """Create default designations, company and admin user if they don't exist."""
+    try:
+        from app.models.designation import Designation
+        from app.models.company import Company
+        from app.models.user import User
+        from app.extensions import db
+
+        # Default designations
+        default_designations = [
+            {"name": "Super Admin", "slug": "super_admin"},
+            {"name": "Admin", "slug": "admin"},
+            {"name": "Manager", "slug": "manager"},
+            {"name": "Analyst", "slug": "analyst"},
+            {"name": "Viewer", "slug": "viewer"},
+        ]
+        for d in default_designations:
+            if not Designation.query.filter_by(slug=d["slug"]).first():
+                db.session.add(Designation(name=d["name"], slug=d["slug"]))
+
+        # Default company
+        company = Company.query.filter_by(slug="default").first()
+        if not company:
+            company = Company(name="Default Company", slug="default", is_active=True)
+            db.session.add(company)
+            db.session.flush()
+
+        # Default super admin
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@demo.com")
+        admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+        if not User.query.filter_by(email=admin_email).first():
+            super_admin_desig = Designation.query.filter_by(slug="super_admin").first()
+            admin = User(
+                email=admin_email,
+                full_name="Super Admin",
+                company_id=company.id,
+                designation_id=super_admin_desig.id if super_admin_desig else None,
+                is_active=True,
+                email_verified=True,
+            )
+            admin.set_password(admin_password)
+            db.session.add(admin)
+
+        db.session.commit()
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        try:
+            from app.extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
