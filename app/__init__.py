@@ -16,7 +16,7 @@ def create_app(config_name=None):
     app.config.from_object(config_map.get(config_name, config_map["development"]))
 
     # Initialize extensions
-    from app.extensions import db, login_manager, migrate, csrf, celery, mail
+    from app.extensions import db, login_manager, migrate, csrf, mail
     db.init_app(app)
 
     # Enable WAL mode for SQLite to allow concurrent reads during writes
@@ -37,17 +37,6 @@ def create_app(config_name=None):
     csrf.init_app(app)
     mail.init_app(app)
 
-    # Configure Celery
-    celery.conf.broker_url = app.config["CELERY_BROKER_URL"]
-    celery.conf.result_backend = app.config["CELERY_RESULT_BACKEND"]
-    celery.conf.update(app.config)
-
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
 
     # Register blueprints
     from app.routes.auth import auth_bp
