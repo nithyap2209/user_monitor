@@ -14,6 +14,7 @@
     @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.15); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.3); } }
     @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    @keyframes float-login { 0%, 100% { transform: translateY(0) rotate(0deg); } 33% { transform: translateY(-15px) rotate(3deg); } 66% { transform: translateY(8px) rotate(-2deg); } }
     @keyframes slide-in-left { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes slide-in-right { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
     @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
@@ -26,7 +27,7 @@
     .float-anim-slow { animation: float 8s ease-in-out infinite; }
     .float-anim-delay { animation: float 7s ease-in-out infinite 1s; }
     .shimmer-text {
-        background: linear-gradient(90deg, #6366f1, #a78bfa, #818cf8, #6366f1);
+        background: linear-gradient(90deg, #6366f1, #818cf8, #4f46e5, #6366f1);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -34,9 +35,7 @@
         animation: shimmer 3s linear infinite;
     }
     .gradient-bg-animated {
-        background: linear-gradient(-45deg, #4f46e5, #7c3aed, #6366f1, #8b5cf6);
-        background-size: 400% 400%;
-        animation: gradient-shift 8s ease infinite;
+        background: #1e1b4b;
     }
     .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
     .slide-left { animation: slide-in-left 0.7s ease forwards; opacity: 0; }
@@ -139,7 +138,7 @@
                     </p>
                     <div class="mt-8 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start fade-up-delay2">
                         <a href="{{ url_for('auth.signup') }}"
-                           class="group px-7 py-3.5 text-sm font-semibold text-white gradient-bg-animated rounded-xl shadow-lg shadow-indigo-200/60 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-300/40 inline-flex items-center gap-2">
+                           class="group px-7 py-3.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200/60 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-300/40 inline-flex items-center gap-2">
                             <i class="fas fa-user-plus"></i> Sign up for free
                             <i class="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
                         </a>
@@ -401,20 +400,22 @@
 
     <!-- ════════════ CTA ════════════ -->
     <section class="relative overflow-hidden">
-        <div class="absolute inset-0 gradient-bg-animated"></div>
-        <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-white/5 rounded-full blur-3xl float-anim"></div>
-        <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-white/5 rounded-full blur-3xl float-anim-delay"></div>
+        <div class="absolute inset-0 bg-indigo-950"></div>
+        <div class="absolute w-[500px] h-[500px] rounded-full border border-indigo-900/40" style="top: -200px; left: -160px;"></div>
+        <div class="absolute w-[400px] h-[400px] rounded-full border border-indigo-900/40" style="bottom: -150px; right: -120px;"></div>
+        <div class="absolute w-[220px] h-[220px] rounded-full bg-indigo-500/[0.06]" style="top: 10%; right: 8%;"></div>
+        <div class="absolute w-[180px] h-[180px] rounded-full bg-indigo-400/[0.05]" style="bottom: 15%; left: 5%;"></div>
         <div class="relative max-w-3xl mx-auto px-6 py-16 text-center">
             <h2 class="text-3xl md:text-4xl font-extrabold text-white reveal">Ready to Monitor Your Social Media?</h2>
-            <p class="mt-4 text-indigo-200 text-lg reveal reveal-delay-1">Start tracking, analyzing, and responding to your audience today. Free to get started.</p>
+            <p class="mt-4 text-indigo-300/70 text-lg reveal reveal-delay-1">Start tracking, analyzing, and responding to your audience today. Free to get started.</p>
             <div class="mt-8 flex items-center justify-center gap-4 reveal reveal-delay-2">
                 <a href="{{ url_for('auth.signup') }}"
-                   class="group px-8 py-3.5 text-sm font-semibold text-indigo-700 bg-white rounded-xl hover:bg-indigo-50 shadow-lg hover:shadow-xl transition-all duration-300 inline-flex items-center gap-2">
+                   class="group px-8 py-3.5 text-sm font-semibold text-white bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all duration-300 inline-flex items-center gap-2">
                     <i class="fas fa-rocket"></i> Get Started Free
                     <i class="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i>
                 </a>
                 <a href="{{ url_for('auth.login') }}"
-                   class="px-8 py-3.5 text-sm font-semibold text-white border-2 border-white/30 rounded-xl hover:bg-white/10 hover:border-white/50 transition-all duration-300 inline-flex items-center gap-2">
+                   class="px-8 py-3.5 text-sm font-semibold text-indigo-300 border-2 border-indigo-400/20 rounded-xl hover:bg-indigo-500/10 hover:border-indigo-400/40 transition-all duration-300 inline-flex items-center gap-2">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
             </div>
