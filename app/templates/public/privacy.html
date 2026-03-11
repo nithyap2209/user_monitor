@@ -5,6 +5,22 @@
 <meta name="description" content="Privacy Policy for User Monitor — how we collect, use, and protect your data.">
 <meta property="og:title" content="Privacy Policy — User Monitor">
 <meta property="og:type" content="website">
+<style>
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-up { animation: fadeUp 0.7s ease forwards; }
+    .fade-up-d1 { animation: fadeUp 0.6s ease forwards 0.15s; opacity: 0; }
+    .fade-up-d2 { animation: fadeUp 0.6s ease forwards 0.3s; opacity: 0; }
+    .fade-in { animation: fadeIn 0.8s ease forwards 0.2s; opacity: 0; }
+    .policy-section { animation: fadeUp 0.6s ease forwards; opacity: 0; }
+    .policy-section:nth-child(2) { animation-delay: 0.1s; }
+    .policy-section:nth-child(3) { animation-delay: 0.15s; }
+    .policy-section:nth-child(4) { animation-delay: 0.2s; }
+    .policy-section:nth-child(5) { animation-delay: 0.25s; }
+    .policy-section:nth-child(6) { animation-delay: 0.3s; }
+    .policy-section:nth-child(7) { animation-delay: 0.35s; }
+    .policy-section:nth-child(8) { animation-delay: 0.4s; }
+</style>
 {% endblock %}
 
 {% block auth_content %}
@@ -17,27 +33,39 @@
                     <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
                         <i class="fas fa-chart-line text-white text-sm"></i>
                     </div>
-                    <span class="text-xl font-bold text-gray-900">User Monitor</span>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">User Monitor</span>
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="{{ url_for('auth.login') }}" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-indigo-600 transition">Login</a>
-                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition">Get Started</a>
+                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200/50 transition">Get Started</a>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Hero Banner -->
+    <section class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
+        <div class="relative max-w-4xl mx-auto px-6 py-16 lg:py-20 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur rounded-full text-indigo-200 text-xs font-medium mb-6 fade-up">
+                <i class="fas fa-shield-alt"></i> Your Privacy Matters
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight fade-up">Privacy Policy</h1>
+            <p class="mt-4 text-indigo-200 text-lg max-w-2xl mx-auto fade-up-d1">How we collect, use, and protect your data at Fourth Dimension User Monitor.</p>
+        </div>
+    </section>
+
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-6 py-14">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Privacy Policy</h1>
-
         <div class="space-y-8 text-gray-600 text-[15px] leading-relaxed">
 
-            <p>At Fourth Dimension User Monitor, we are committed to protecting your privacy and respecting the data you trust us with. This Privacy Policy explains what data we collect, how we use it, what rights you have, and how we secure and manage your information.</p>
+            <p class="fade-in">At Fourth Dimension User Monitor, we are committed to protecting your privacy and respecting the data you trust us with. This Privacy Policy explains what data we collect, how we use it, what rights you have, and how we secure and manage your information.</p>
 
             <!-- Key Principles -->
-            <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-6">
-                <h3 class="font-bold text-indigo-900 mb-3">Key Privacy Principles</h3>
+            <div class="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl p-6 fade-up-d2">
+                <h3 class="font-bold text-indigo-900 mb-3"><i class="fas fa-lock text-indigo-500 mr-2"></i>Key Privacy Principles</h3>
                 <ul class="space-y-2">
                     <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>We do not sell or rent your data to third parties</span></li>
                     <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>We collect only essential information to provide our services</span></li>
@@ -46,13 +74,13 @@
                 </ul>
             </div>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Scope and Purpose</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-bullseye text-indigo-600 text-sm"></i></span> Scope and Purpose</h2>
                 <p>This Privacy Policy applies to all users of the Fourth Dimension User Monitor platform, website, and associated services. By accessing or using Fourth Dimension User Monitor, you agree to the practices described here. If you do not agree with this policy, you should not use our services.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Information We Collect</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-database text-blue-600 text-sm"></i></span> Information We Collect</h2>
 
                 <h3 class="font-semibold text-gray-800 mt-4 mb-2">Account Information</h3>
                 <p>When you register for Fourth Dimension User Monitor, we collect:</p>
@@ -76,8 +104,8 @@
                 <p>We use cookies for secure login, session tracking, and analytics to improve your user experience.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">How We Use Your Information</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-cogs text-emerald-600 text-sm"></i></span> How We Use Your Information</h2>
                 <p>We use your information to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Provide and manage access to Fourth Dimension User Monitor features</li>
@@ -90,8 +118,8 @@
                 <p class="mt-3">We do not use your data for third-party marketing or advertising purposes.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Sharing and Disclosure</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-share-alt text-amber-600 text-sm"></i></span> Data Sharing and Disclosure</h2>
                 <p>We do not sell or rent your data. We may share data only in the following circumstances:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li><strong>With trusted service providers:</strong> For payment processing, cloud hosting, and analytics under confidentiality agreements</li>
@@ -100,13 +128,13 @@
                 </ul>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Retention</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-clock text-purple-600 text-sm"></i></span> Data Retention</h2>
                 <p>We retain your account data for as long as your account is active or as needed to fulfill the purposes outlined in this policy. If you cancel your subscription or delete your account, we will retain billing records and system logs as required by law, and remove audit-related data and user activity logs within 60 days, unless retention is legally mandated.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Security</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-lock text-rose-600 text-sm"></i></span> Data Security</h2>
                 <h3 class="font-semibold text-gray-800 mt-4 mb-2">Industry-Standard Security</h3>
                 <p>We use industry-standard security measures to protect your information, including:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
@@ -118,8 +146,8 @@
                 <p class="mt-3">While we take every precaution to safeguard your data, no method of transmission or storage is 100% secure. We encourage strong passwords and responsible access practices.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Your Rights</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-user-shield text-teal-600 text-sm"></i></span> Your Rights</h2>
                 <p>As a Fourth Dimension User Monitor user, you have the right to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Access the personal data we hold about you</li>
@@ -131,36 +159,36 @@
                 <p class="mt-3">To exercise these rights, contact our support team. We will respond within 7–10 working days.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">International Access and Storage</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-globe text-sky-600 text-sm"></i></span> International Access and Storage</h2>
                 <p>Fourth Dimension User Monitor is operated from India. If you are accessing the service from outside India, you consent to your data being processed and stored in India under Indian data protection laws.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Children's Privacy</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-child text-pink-600 text-sm"></i></span> Children's Privacy</h2>
                 <p>Fourth Dimension User Monitor is not intended for use by individuals under 18 years of age. We do not knowingly collect data from minors. If we learn that we have collected personal data from someone underage, we will delete it immediately.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Third-Party Links and Integrations</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-external-link-alt text-orange-600 text-sm"></i></span> Third-Party Links and Integrations</h2>
                 <p>Our platform may contain links to external websites or services. We are not responsible for the privacy practices or content of these external entities. Use caution and review their policies before sharing any personal information.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Grievance Officer</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-gavel text-red-600 text-sm"></i></span> Grievance Officer</h2>
                 <p>In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, users can contact our designated grievance officer for privacy-related concerns.</p>
                 <p class="mt-2">Working Hours: Monday to Friday, 10:00 AM to 6:00 PM (IST)</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Updates to This Policy</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-sync-alt text-cyan-600 text-sm"></i></span> Updates to This Policy</h2>
                 <p>We may update this privacy policy from time to time to reflect legal, technical, or operational changes. When we make material changes, we will notify users by email or through platform alerts. Continued use of the Service after changes take effect implies your agreement with the updated policy.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Contact Information</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-envelope text-indigo-600 text-sm"></i></span> Contact Information</h2>
                 <p>For any privacy-related questions, concerns, or data access requests, please contact:</p>
-                <div class="mt-3 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <div class="mt-3 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl p-5 border border-gray-100">
                     <p class="font-semibold text-gray-900">Fourth Dimension Media Solution</p>
                     <p class="mt-2"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>Shyamala Towers, 3rd floor, No. 136, Arcot Rd, Saligramam, Chennai, Tamil Nadu 600092</p>
                     <p class="mt-1"><i class="fas fa-envelope text-indigo-500 mr-2"></i>support@usermonitor.app</p>
@@ -169,8 +197,53 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- ════════════ FOOTER ════════════ -->
     <footer class="bg-gray-900 text-gray-400">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 py-14">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                <div class="md:col-span-1">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white">User Monitor</span>
+                    </div>
+                    <p class="text-sm leading-relaxed">Social media comment monitoring and analytics platform for teams.</p>
+                    <div class="flex items-center gap-3 mt-5">
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-facebook-f text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-linkedin-in text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-instagram text-xs"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Features</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Comment Monitoring</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Sentiment Analysis</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Translation</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Analytics Dashboard</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Lead Extraction</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Resources</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#how-it-works" class="hover:text-white transition">How It Works</a></li>
+                        <li><a href="{{ url_for('public.home') }}#platforms" class="hover:text-white transition">Supported Platforms</a></li>
+                        <li><a href="{{ url_for('auth.signup') }}" class="hover:text-white transition">Get Started</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="hover:text-white transition">Login</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Company</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.privacy') }}" class="text-white font-medium">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('public.terms') }}" class="hover:text-white transition">Terms of Service</a></li>
+                        <li><a href="{{ url_for('public.cookies') }}" class="hover:text-white transition">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         <div class="border-t border-gray-800">
             <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 <p class="text-sm">&copy; 2026 User Monitor. All rights reserved.</p>

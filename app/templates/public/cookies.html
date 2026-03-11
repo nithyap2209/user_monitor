@@ -5,6 +5,20 @@
 <meta name="description" content="Cookie Policy for User Monitor — how we use cookies and similar technologies.">
 <meta property="og:title" content="Cookie Policy — User Monitor">
 <meta property="og:type" content="website">
+<style>
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-up { animation: fadeUp 0.7s ease forwards; }
+    .fade-up-d1 { animation: fadeUp 0.6s ease forwards 0.15s; opacity: 0; }
+    .fade-up-d2 { animation: fadeUp 0.6s ease forwards 0.3s; opacity: 0; }
+    .fade-in { animation: fadeIn 0.8s ease forwards 0.2s; opacity: 0; }
+    .policy-section { animation: fadeUp 0.6s ease forwards; opacity: 0; }
+    .policy-section:nth-child(2) { animation-delay: 0.1s; }
+    .policy-section:nth-child(3) { animation-delay: 0.15s; }
+    .policy-section:nth-child(4) { animation-delay: 0.2s; }
+    .policy-section:nth-child(5) { animation-delay: 0.25s; }
+    .policy-section:nth-child(6) { animation-delay: 0.3s; }
+</style>
 {% endblock %}
 
 {% block auth_content %}
@@ -17,31 +31,43 @@
                     <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
                         <i class="fas fa-chart-line text-white text-sm"></i>
                     </div>
-                    <span class="text-xl font-bold text-gray-900">User Monitor</span>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">User Monitor</span>
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="{{ url_for('auth.login') }}" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-indigo-600 transition">Login</a>
-                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition">Get Started</a>
+                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200/50 transition">Get Started</a>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Hero Banner -->
+    <section class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-emerald-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
+        <div class="relative max-w-4xl mx-auto px-6 py-16 lg:py-20 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur rounded-full text-emerald-200 text-xs font-medium mb-6 fade-up">
+                <i class="fas fa-cookie-bite"></i> Cookie Transparency
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight fade-up">Cookie Policy</h1>
+            <p class="mt-4 text-emerald-200 text-lg max-w-2xl mx-auto fade-up-d1">How Fourth Dimension User Monitor uses cookies and similar technologies.</p>
+        </div>
+    </section>
+
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-6 py-14">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Cookie Policy</h1>
-
         <div class="space-y-8 text-gray-600 text-[15px] leading-relaxed">
 
-            <p>This Cookie Policy explains how Fourth Dimension User Monitor uses cookies and similar technologies to recognize you when you visit our website or use our platform. It outlines what these technologies are, why we use them, and how you can control them.</p>
+            <p class="fade-in">This Cookie Policy explains how Fourth Dimension User Monitor uses cookies and similar technologies to recognize you when you visit our website or use our platform. It outlines what these technologies are, why we use them, and how you can control them.</p>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">What Are Cookies?</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-cookie text-amber-600 text-sm"></i></span> What Are Cookies?</h2>
                 <p>Cookies are small text files that are stored on your device when you visit a website. They allow a site to recognize your device, remember your preferences, and help improve your user experience. Cookies may be set by us (first-party cookies) or by third-party services we integrate with (third-party cookies).</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Why We Use Cookies</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-question-circle text-indigo-600 text-sm"></i></span> Why We Use Cookies</h2>
                 <p>Fourth Dimension User Monitor uses cookies for the following purposes:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li><strong>Essential Access:</strong> To allow you to log in and securely use the dashboard and account areas</li>
@@ -51,23 +77,23 @@
                 </ul>
             </section>
 
-            <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-5">
+            <div class="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl p-5 fade-up-d2">
                 <h3 class="font-bold text-indigo-900 mb-2"><i class="fas fa-shield-alt text-indigo-500 mr-2"></i>Privacy First</h3>
                 <p class="text-indigo-800">We do not use cookies for advertising or behavioral tracking. Our cookie usage is focused on functionality and product improvement.</p>
             </div>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Types of Cookies We Use</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-list-alt text-emerald-600 text-sm"></i></span> Types of Cookies We Use</h2>
 
                 <!-- Strictly Necessary -->
                 <h3 class="font-semibold text-gray-800 mt-6 mb-3 flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-bold">Essential</span>
+                    <span class="px-2.5 py-0.5 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-full text-xs font-bold border border-green-100">Essential</span>
                     Strictly Necessary
                 </h3>
                 <p class="mb-3">Required for core platform functions such as login and secure browsing.</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border border-gray-200 rounded-xl overflow-hidden text-sm">
-                        <thead class="bg-gray-50">
+                        <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Cookie</th>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Purpose</th>
@@ -88,13 +114,13 @@
 
                 <!-- Functional -->
                 <h3 class="font-semibold text-gray-800 mt-8 mb-3 flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">Functional</span>
+                    <span class="px-2.5 py-0.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-full text-xs font-bold border border-blue-100">Functional</span>
                     Functional
                 </h3>
                 <p class="mb-3">Help remember your preferences across sessions.</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border border-gray-200 rounded-xl overflow-hidden text-sm">
-                        <thead class="bg-gray-50">
+                        <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Cookie</th>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Purpose</th>
@@ -115,13 +141,13 @@
 
                 <!-- Analytics -->
                 <h3 class="font-semibold text-gray-800 mt-8 mb-3 flex items-center gap-2">
-                    <span class="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-bold">Analytics</span>
+                    <span class="px-2.5 py-0.5 bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 rounded-full text-xs font-bold border border-amber-100">Analytics</span>
                     Analytics
                 </h3>
                 <p class="mb-3">Help us understand how users interact with features and flows.</p>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border border-gray-200 rounded-xl overflow-hidden text-sm">
-                        <thead class="bg-gray-50">
+                        <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <tr>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Cookie</th>
                                 <th class="px-4 py-3 font-semibold text-gray-700">Purpose</th>
@@ -141,8 +167,8 @@
                 </div>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Third-Party Cookies</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-puzzle-piece text-purple-600 text-sm"></i></span> Third-Party Cookies</h2>
                 <p>We may use third-party services to help us monitor system performance or gather anonymized usage insights. These third-party services may set their own cookies in your browser. For example:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Google Analytics may store a cookie to differentiate new and returning users</li>
@@ -151,34 +177,34 @@
                 <p class="mt-3">Fourth Dimension User Monitor does <strong>not</strong> allow third-party advertisers or social media trackers to place cookies on our platform.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">How You Can Control Cookies</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-sliders-h text-teal-600 text-sm"></i></span> How You Can Control Cookies</h2>
                 <p>You can manage or delete cookies through your browser settings at any time. Most modern browsers provide settings to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Block all cookies</li>
                     <li>Clear existing cookies</li>
                     <li>Set exceptions for trusted websites</li>
                 </ul>
-                <div class="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div class="mt-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
                     <p class="text-amber-800 text-sm"><i class="fas fa-exclamation-triangle text-amber-500 mr-2"></i><strong>Important Note:</strong> Blocking essential cookies may affect your ability to use some features of the Fourth Dimension User Monitor platform, such as logging in or saving settings.</p>
                 </div>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Consent and Updates</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-check-double text-sky-600 text-sm"></i></span> Consent and Updates</h2>
                 <p>By continuing to use Fourth Dimension User Monitor, you consent to the use of cookies as described in this policy. You may withdraw consent at any time by adjusting your browser settings or clearing cookies.</p>
                 <p class="mt-3">We may update this Cookie Policy from time to time to reflect changes in legal requirements, third-party services, or platform features. When we do, the "Last Updated" date will be revised.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Changes to This Cookie Policy</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-sync-alt text-cyan-600 text-sm"></i></span> Changes to This Cookie Policy</h2>
                 <p>We will notify you of any material changes by posting the new Cookie Policy on this page and updating the effective date.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Contact Information</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-envelope text-indigo-600 text-sm"></i></span> Contact Information</h2>
                 <p>If you have any questions about our use of cookies or this policy, please contact:</p>
-                <div class="mt-3 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <div class="mt-3 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl p-5 border border-gray-100">
                     <p class="font-semibold text-gray-900">Fourth Dimension Media Solution</p>
                     <p class="mt-2"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>Shyamala Towers, 3rd floor, No. 136, Arcot Rd, Saligramam, Chennai, Tamil Nadu 600092</p>
                     <p class="mt-1"><i class="fas fa-envelope text-indigo-500 mr-2"></i>support@usermonitor.app</p>
@@ -187,8 +213,53 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- ════════════ FOOTER ════════════ -->
     <footer class="bg-gray-900 text-gray-400">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 py-14">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                <div class="md:col-span-1">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white">User Monitor</span>
+                    </div>
+                    <p class="text-sm leading-relaxed">Social media comment monitoring and analytics platform for teams.</p>
+                    <div class="flex items-center gap-3 mt-5">
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-facebook-f text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-linkedin-in text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-instagram text-xs"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Features</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Comment Monitoring</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Sentiment Analysis</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Translation</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Analytics Dashboard</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Lead Extraction</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Resources</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#how-it-works" class="hover:text-white transition">How It Works</a></li>
+                        <li><a href="{{ url_for('public.home') }}#platforms" class="hover:text-white transition">Supported Platforms</a></li>
+                        <li><a href="{{ url_for('auth.signup') }}" class="hover:text-white transition">Get Started</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="hover:text-white transition">Login</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Company</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.privacy') }}" class="hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('public.terms') }}" class="hover:text-white transition">Terms of Service</a></li>
+                        <li><a href="{{ url_for('public.cookies') }}" class="text-white font-medium">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         <div class="border-t border-gray-800">
             <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 <p class="text-sm">&copy; 2026 User Monitor. All rights reserved.</p>

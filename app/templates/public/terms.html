@@ -5,6 +5,22 @@
 <meta name="description" content="Terms and Conditions of Use for User Monitor platform.">
 <meta property="og:title" content="Terms and Conditions — User Monitor">
 <meta property="og:type" content="website">
+<style>
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .fade-up { animation: fadeUp 0.7s ease forwards; }
+    .fade-up-d1 { animation: fadeUp 0.6s ease forwards 0.15s; opacity: 0; }
+    .fade-up-d2 { animation: fadeUp 0.6s ease forwards 0.3s; opacity: 0; }
+    .fade-in { animation: fadeIn 0.8s ease forwards 0.2s; opacity: 0; }
+    .policy-section { animation: fadeUp 0.6s ease forwards; opacity: 0; }
+    .policy-section:nth-child(2) { animation-delay: 0.1s; }
+    .policy-section:nth-child(3) { animation-delay: 0.15s; }
+    .policy-section:nth-child(4) { animation-delay: 0.2s; }
+    .policy-section:nth-child(5) { animation-delay: 0.25s; }
+    .policy-section:nth-child(6) { animation-delay: 0.3s; }
+    .policy-section:nth-child(7) { animation-delay: 0.35s; }
+    .policy-section:nth-child(8) { animation-delay: 0.4s; }
+</style>
 {% endblock %}
 
 {% block auth_content %}
@@ -17,36 +33,48 @@
                     <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
                         <i class="fas fa-chart-line text-white text-sm"></i>
                     </div>
-                    <span class="text-xl font-bold text-gray-900">User Monitor</span>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">User Monitor</span>
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="{{ url_for('auth.login') }}" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-indigo-600 transition">Login</a>
-                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition">Get Started</a>
+                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200/50 transition">Get Started</a>
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Hero Banner -->
+    <section class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-700 via-gray-800 to-slate-900"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-violet-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
+        <div class="relative max-w-4xl mx-auto px-6 py-16 lg:py-20 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur rounded-full text-gray-300 text-xs font-medium mb-6 fade-up">
+                <i class="fas fa-file-contract"></i> Legal Agreement
+            </div>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight fade-up">Terms and Conditions</h1>
+            <p class="mt-4 text-gray-300 text-lg max-w-2xl mx-auto fade-up-d1">Please read these terms carefully before using the Fourth Dimension User Monitor platform.</p>
+        </div>
+    </section>
+
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-6 py-14">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Terms and Conditions of Use</h1>
-
         <div class="space-y-8 text-gray-600 text-[15px] leading-relaxed">
 
-            <p>This Terms and Conditions of Use ("Agreement") is entered into between you (either as an individual user or as an authorized representative of an organization) and Fourth Dimension User Monitor ("Company", "we", "us", or "our"), and governs your access to and use of our services.</p>
+            <p class="fade-in">This Terms and Conditions of Use ("Agreement") is entered into between you (either as an individual user or as an authorized representative of an organization) and Fourth Dimension User Monitor ("Company", "we", "us", or "our"), and governs your access to and use of our services.</p>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Agreement to Terms</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-handshake text-indigo-600 text-sm"></i></span> Agreement to Terms</h2>
                 <p>By accessing or using Fourth Dimension User Monitor, you acknowledge that you have read, understood, and agree to be bound by the terms of this Agreement. If you do not agree, you should not use the Service.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Description of Service</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-info-circle text-blue-600 text-sm"></i></span> Description of Service</h2>
                 <p>Fourth Dimension User Monitor is a real-time social media comment monitoring tool that allows users to analyze comments from publicly accessible social media pages. It provides insights into comment sentiment, audience engagement, language translation, lead extraction, and analytics. The Service is designed to support users in monitoring, analyzing, and responding to social media interactions across multiple platforms.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Key Definitions</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-book text-emerald-600 text-sm"></i></span> Key Definitions</h2>
                 <ul class="list-disc pl-6 space-y-1">
                     <li><strong>Account:</strong> Your registered access to Fourth Dimension User Monitor Services</li>
                     <li><strong>User:</strong> Any individual or entity accessing or using the Service</li>
@@ -55,8 +83,8 @@
                 </ul>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Eligibility</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-user-check text-amber-600 text-sm"></i></span> Eligibility</h2>
                 <p>To use the Service, you must be:</p>
                 <ol class="list-decimal pl-6 space-y-1 mt-2">
                     <li>At least 18 years of age or the legal age of majority in your jurisdiction</li>
@@ -66,8 +94,8 @@
                 <p class="mt-3">If you are using the Service on behalf of an organization, you represent and warrant that you have the authority to bind that entity to this Agreement.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Account Registration and Security</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-key text-purple-600 text-sm"></i></span> Account Registration and Security</h2>
                 <p>You must register for an account to use Fourth Dimension User Monitor. You agree to:</p>
                 <ol class="list-decimal pl-6 space-y-1 mt-2">
                     <li>Provide accurate and complete information during sign-up</li>
@@ -77,8 +105,8 @@
                 <p class="mt-3">You must not share your login credentials or allow others to access your account unless authorized through a team or agency plan.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Acceptable Use</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-rose-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-exclamation-triangle text-rose-600 text-sm"></i></span> Acceptable Use</h2>
                 <p>By using Fourth Dimension User Monitor, you agree <strong>NOT</strong> to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Scan or attempt to scan websites you do not have the right to access</li>
@@ -90,8 +118,8 @@
                 </ul>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Subscriptions and Payment</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-credit-card text-teal-600 text-sm"></i></span> Subscriptions and Payment</h2>
                 <p>Fourth Dimension User Monitor offers multiple subscription plans. By subscribing to a paid plan, you agree to:</p>
                 <ol class="list-decimal pl-6 space-y-1 mt-2">
                     <li>Pay all fees associated with your selected plan</li>
@@ -101,9 +129,9 @@
                 <p class="mt-3">You are responsible for updating your billing information.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Privacy</h2>
-                <p>Your use of the Service is also governed by our <a href="{{ url_for('public.privacy') }}" class="text-indigo-600 hover:underline">Privacy Policy</a>. Key points:</p>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-shield-alt text-sky-600 text-sm"></i></span> Data Privacy</h2>
+                <p>Your use of the Service is also governed by our <a href="{{ url_for('public.privacy') }}" class="text-indigo-600 hover:underline font-medium">Privacy Policy</a>. Key points:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>We do not store full-page content beyond the scope of each audit</li>
                     <li>We do not sell or share your data with third-party advertisers</li>
@@ -111,13 +139,13 @@
                 </ul>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Your Data Rights</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-user-lock text-pink-600 text-sm"></i></span> Your Data Rights</h2>
                 <p>You may request deletion of your account and associated data at any time by contacting our support team.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Intellectual Property</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-copyright text-orange-600 text-sm"></i></span> Intellectual Property</h2>
                 <p>All rights, title, and interest in Fourth Dimension User Monitor, including software, interface, visual elements, logic, and brand assets, are the exclusive property of Fourth Dimension User Monitor. You may not:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Copy, reproduce, or adapt any part of the platform</li>
@@ -126,8 +154,8 @@
                 </ul>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Termination</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-ban text-red-600 text-sm"></i></span> Termination</h2>
                 <p>You may terminate your account at any time through the dashboard or by contacting support. We may terminate or suspend your account if:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>You breach any provision of this Agreement</li>
@@ -137,8 +165,8 @@
                 <p class="mt-3">Upon termination, your access will be revoked and stored data may be deleted.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Disclaimers</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-exclamation-circle text-gray-600 text-sm"></i></span> Disclaimers</h2>
                 <p>Fourth Dimension User Monitor is provided on an "as is" and "as available" basis. We make no guarantees regarding:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>SEO rankings, traffic, or visibility outcomes</li>
@@ -148,8 +176,8 @@
                 <p class="mt-3">You acknowledge that insights provided are based on live data and public structures, and may change as websites are updated.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Limitation of Liability</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-balance-scale text-yellow-600 text-sm"></i></span> Limitation of Liability</h2>
                 <p>To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, or consequential damages, including:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Loss of revenue or business opportunities</li>
@@ -159,24 +187,24 @@
                 <p class="mt-3">In all cases, our total liability shall not exceed the amount you have paid to Fourth Dimension User Monitor in the previous twelve (12) months.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Governing Law</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-gavel text-violet-600 text-sm"></i></span> Governing Law</h2>
                 <p>This Agreement shall be governed by applicable laws. Any disputes shall be subject to the appropriate jurisdiction of competent courts.</p>
             </section>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Changes to Terms</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-sync-alt text-cyan-600 text-sm"></i></span> Changes to Terms</h2>
                 <p>We may update this Agreement to reflect changes in law, platform features, or internal policies. You will be notified of material changes by email or via the platform. Continued use of the Service after such changes constitutes acceptance.</p>
             </section>
 
-            <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+            <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
                 <p class="text-amber-800"><i class="fas fa-exclamation-circle text-amber-500 mr-2"></i><strong>Important Note:</strong> By using our services, you acknowledge that you have read and understood these Terms of Service and agree to be bound by them. We reserve the right to suspend or terminate accounts that engage in prohibited activity.</p>
             </div>
 
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">Contact Information</h2>
+            <section class="policy-section">
+                <h2 class="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0"><i class="fas fa-envelope text-indigo-600 text-sm"></i></span> Contact Information</h2>
                 <p>For questions regarding these Terms, please contact our support team.</p>
-                <div class="mt-3 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <div class="mt-3 bg-gradient-to-br from-gray-50 to-indigo-50/30 rounded-xl p-5 border border-gray-100">
                     <p class="font-semibold text-gray-900">Fourth Dimension Media Solution</p>
                     <p class="mt-2"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>Shyamala Towers, 3rd floor, No. 136, Arcot Rd, Saligramam, Chennai, Tamil Nadu 600092</p>
                     <p class="mt-1"><i class="fas fa-envelope text-indigo-500 mr-2"></i>support@usermonitor.app</p>
@@ -185,8 +213,53 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- ════════════ FOOTER ════════════ -->
     <footer class="bg-gray-900 text-gray-400">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 py-14">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                <div class="md:col-span-1">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white">User Monitor</span>
+                    </div>
+                    <p class="text-sm leading-relaxed">Social media comment monitoring and analytics platform for teams.</p>
+                    <div class="flex items-center gap-3 mt-5">
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-facebook-f text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-linkedin-in text-xs"></i></a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition"><i class="fab fa-instagram text-xs"></i></a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Features</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Comment Monitoring</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Sentiment Analysis</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Translation</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Analytics Dashboard</a></li>
+                        <li><a href="{{ url_for('public.home') }}#features" class="hover:text-white transition">Lead Extraction</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Resources</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.home') }}#how-it-works" class="hover:text-white transition">How It Works</a></li>
+                        <li><a href="{{ url_for('public.home') }}#platforms" class="hover:text-white transition">Supported Platforms</a></li>
+                        <li><a href="{{ url_for('auth.signup') }}" class="hover:text-white transition">Get Started</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="hover:text-white transition">Login</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Company</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.privacy') }}" class="hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('public.terms') }}" class="text-white font-medium">Terms of Service</a></li>
+                        <li><a href="{{ url_for('public.cookies') }}" class="hover:text-white transition">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         <div class="border-t border-gray-800">
             <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 <p class="text-sm">&copy; 2026 User Monitor. All rights reserved.</p>
