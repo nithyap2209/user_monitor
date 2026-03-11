@@ -219,4 +219,4 @@ def reset_password(token):
 def logout():
     logout_user()
     flash("Logged out.", "info")
-    return redirect(url_for("auth.login"))
+    return redirect(url_for("public.home"))

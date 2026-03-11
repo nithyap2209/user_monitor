@@ -1,180 +1,414 @@
 {% extends 'base.html' %}
-{% block title %}User Monitor — Social Media Monitoring Dashboard{% endblock %}
+{% block title %}User Monitor — Social Media Comment Monitoring & Analytics Platform{% endblock %}
 
 {% block head %}
 <meta name="description" content="User Monitor helps businesses track, analyze, and respond to social media comments across YouTube, Facebook, Instagram, LinkedIn, and Twitter from one unified dashboard.">
-<meta property="og:title" content="User Monitor — Social Media Monitoring Dashboard">
-<meta property="og:description" content="Track, analyze, and respond to social media comments across all platforms from one dashboard.">
+<meta property="og:title" content="User Monitor — Social Media Comment Monitoring & Analytics">
+<meta property="og:description" content="Track, analyze sentiment, translate, and respond to social media comments across all platforms from one dashboard.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ request.url }}">
+<style>
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    .fade-up { animation: fadeUp 0.7s ease forwards; }
+    .fade-up-delay { animation: fadeUp 0.7s ease forwards 0.2s; opacity: 0; }
+    .fade-up-delay2 { animation: fadeUp 0.7s ease forwards 0.4s; opacity: 0; }
+    .scale-in { animation: scaleIn 0.8s ease forwards 0.3s; opacity: 0; }
+</style>
 {% endblock %}
 
 {% block auth_content %}
-<div class="min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-chart-line text-white text-sm"></i>
+<div class="min-h-screen bg-white">
+
+    <!-- ════════════ NAVBAR ════════════ -->
+    <nav class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="{{ url_for('public.home') }}" class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                        <i class="fas fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900 tracking-tight">User Monitor</span>
+                </a>
+
+                <!-- Nav links (desktop) -->
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">Features</a>
+                    <a href="#how-it-works" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">How It Works</a>
+                    <a href="#platforms" class="text-sm font-medium text-gray-600 hover:text-indigo-600 transition">Platforms</a>
                 </div>
-                <span class="text-xl font-bold text-gray-800">User Monitor</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ url_for('auth.login') }}"
-                   class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
-                    Log In
-                </a>
-                <a href="{{ url_for('auth.signup') }}"
-                   class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
-                    Get Started
-                </a>
+
+                <!-- Auth buttons -->
+                <div class="flex items-center gap-3">
+                    <a href="{{ url_for('auth.login') }}"
+                       class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-indigo-600 transition">
+                        Login
+                    </a>
+                    <a href="{{ url_for('auth.signup') }}"
+                       class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200/50 transition">
+                        Get Started
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
-            Monitor All Your Social Media<br>
-            <span class="text-indigo-600">Comments in One Place</span>
-        </h1>
-        <p class="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
-            Track, analyze sentiment, translate, and respond to comments across
-            YouTube, Facebook, Instagram, LinkedIn, and Twitter — all from a single dashboard.
-        </p>
-        <div class="mt-8 flex items-center justify-center gap-4">
-            <a href="{{ url_for('auth.signup') }}"
-               class="px-6 py-3 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">
-                <i class="fas fa-rocket mr-2"></i> Start Free
-            </a>
-            <a href="{{ url_for('auth.login') }}"
-               class="px-6 py-3 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition">
-                <i class="fas fa-sign-in-alt mr-2"></i> Log In
-            </a>
+    <!-- ════════════ HERO ════════════ -->
+    <section class="relative overflow-hidden">
+        <!-- Background decoration -->
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40"></div>
+        <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-100/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3"></div>
+
+        <div class="relative max-w-7xl mx-auto px-6 lg:px-8 pt-16 pb-20 lg:pt-24 lg:pb-28">
+            <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+                <!-- Left: Text -->
+                <div class="flex-1 text-center lg:text-left">
+                    <h1 class="text-4xl md:text-5xl lg:text-[3.25rem] font-extrabold text-gray-900 leading-[1.15] fade-up">
+                        Social Media Comment<br>
+                        Monitoring for<br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Data-Driven Teams</span>
+                    </h1>
+                    <p class="mt-6 text-lg text-gray-500 leading-relaxed max-w-xl mx-auto lg:mx-0 fade-up-delay">
+                        We built User Monitor for teams that need to track, analyze, and respond to social media comments at scale. Our platform helps you understand what your audience is saying, detect sentiment, and never miss a conversation.
+                    </p>
+                    <div class="mt-8 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start fade-up-delay2">
+                        <a href="{{ url_for('auth.signup') }}"
+                           class="px-7 py-3.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200/60 transition inline-flex items-center gap-2">
+                            <i class="fas fa-user-plus"></i> Sign up for free
+                        </a>
+                        <a href="#features"
+                           class="px-7 py-3.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:text-indigo-600 transition inline-flex items-center gap-2">
+                            <i class="fas fa-play-circle"></i> See Features
+                        </a>
+                    </div>
+
+                    <!-- Social proof -->
+                    <div class="mt-10 flex items-center gap-4 justify-center lg:justify-start fade-up-delay2">
+                        <div class="flex -space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-indigo-200 border-2 border-white flex items-center justify-center text-xs font-bold text-indigo-700">P</div>
+                            <div class="w-8 h-8 rounded-full bg-emerald-200 border-2 border-white flex items-center justify-center text-xs font-bold text-emerald-700">N</div>
+                            <div class="w-8 h-8 rounded-full bg-amber-200 border-2 border-white flex items-center justify-center text-xs font-bold text-amber-700">S</div>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            <span class="font-semibold text-gray-700">Trusted by teams</span> managing social media
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Dashboard mockup -->
+                <div class="flex-1 max-w-xl lg:max-w-none scale-in">
+                    <div class="bg-white rounded-2xl shadow-2xl shadow-gray-200/60 border border-gray-100 overflow-hidden">
+                        <!-- Window bar -->
+                        <div class="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100">
+                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+                            <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
+                            <div class="flex-1 mx-4">
+                                <div class="bg-white rounded-md px-3 py-1 text-xs text-gray-400 border text-center">user-monitor.app/dashboard</div>
+                            </div>
+                        </div>
+                        <!-- Dashboard preview -->
+                        <div class="p-5 space-y-4">
+                            <!-- Stats row -->
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl p-3 text-center border border-blue-100/60">
+                                    <div class="text-lg font-bold text-blue-700">1,247</div>
+                                    <div class="text-[10px] text-blue-500 font-medium">Total Comments</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-xl p-3 text-center border border-emerald-100/60">
+                                    <div class="text-lg font-bold text-emerald-700">68%</div>
+                                    <div class="text-[10px] text-emerald-500 font-medium">Positive</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-xl p-3 text-center border border-amber-100/60">
+                                    <div class="text-lg font-bold text-amber-700">24</div>
+                                    <div class="text-[10px] text-amber-500 font-medium">Flagged</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-3 text-center border border-purple-100/60">
+                                    <div class="text-lg font-bold text-purple-700">5</div>
+                                    <div class="text-[10px] text-purple-500 font-medium">Platforms</div>
+                                </div>
+                            </div>
+                            <!-- Chart placeholder -->
+                            <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs font-semibold text-gray-700">Sentiment Trend</span>
+                                    <span class="text-[10px] text-gray-400">Last 7 days</span>
+                                </div>
+                                <div class="flex items-end gap-1.5 h-16">
+                                    <div class="flex-1 bg-emerald-300 rounded-t" style="height:60%"></div>
+                                    <div class="flex-1 bg-emerald-400 rounded-t" style="height:75%"></div>
+                                    <div class="flex-1 bg-emerald-300 rounded-t" style="height:55%"></div>
+                                    <div class="flex-1 bg-red-300 rounded-t" style="height:30%"></div>
+                                    <div class="flex-1 bg-emerald-400 rounded-t" style="height:85%"></div>
+                                    <div class="flex-1 bg-emerald-500 rounded-t" style="height:100%"></div>
+                                    <div class="flex-1 bg-emerald-400 rounded-t" style="height:70%"></div>
+                                </div>
+                            </div>
+                            <!-- Comment rows -->
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                                    <div class="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><i class="fab fa-youtube text-red-500 text-xs"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-[11px] font-medium text-gray-700 truncate">Great video! Really helpful content</div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-semibold rounded-full flex-shrink-0">Positive</span>
+                                </div>
+                                <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                                    <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0"><i class="fab fa-facebook-f text-blue-500 text-xs"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-[11px] font-medium text-gray-700 truncate">When will the next update come?</div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] font-semibold rounded-full flex-shrink-0">Neutral</span>
+                                </div>
+                                <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                                    <div class="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0"><i class="fab fa-instagram text-pink-500 text-xs"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-[11px] font-medium text-gray-700 truncate">Semma content bro! Keep going</div>
+                                    </div>
+                                    <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-semibold rounded-full flex-shrink-0">Positive</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Features -->
-    <section class="max-w-6xl mx-auto px-6 py-16">
-        <h2 class="text-2xl font-bold text-gray-800 text-center mb-12">Everything You Need</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-comments text-red-500 text-xl"></i>
-                </div>
-                <h3 class="font-semibold text-gray-800 mb-2">Unified Comment Inbox</h3>
-                <p class="text-sm text-gray-500">
-                    View and respond to comments from YouTube, Facebook, Instagram, LinkedIn, and Twitter in one feed.
-                </p>
+    <!-- ════════════ POWERFUL FEATURES ════════════ -->
+    <section id="features" class="bg-white py-20 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900">Powerful Analysis Tools</h2>
+                <p class="mt-4 text-gray-500 max-w-2xl mx-auto">Everything you need to monitor, analyze, and respond to your social media audience — in one platform.</p>
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-brain text-indigo-500 text-xl"></i>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition">
+                        <i class="fas fa-inbox text-indigo-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Unified Comment Inbox</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">View and respond to comments from all connected platforms in one unified feed. Filter by sentiment, platform, or status.</p>
                 </div>
-                <h3 class="font-semibold text-gray-800 mb-2">AI Sentiment Analysis</h3>
-                <p class="text-sm text-gray-500">
-                    Automatically detect positive, negative, and neutral comments using VADER, TextBlob, and keyword analysis.
-                </p>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-language text-emerald-500 text-xl"></i>
+                <!-- Feature 2 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition">
+                        <i class="fas fa-brain text-emerald-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">AI Sentiment Analysis</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Multi-engine NLP ensemble using VADER, TextBlob, and regional keyword analysis. Supports Tanglish, Hinglish, and 50+ languages.</p>
                 </div>
-                <h3 class="font-semibold text-gray-800 mb-2">Multi-Language Translation</h3>
-                <p class="text-sm text-gray-500">
-                    Translate comments from any language including Tanglish, Hinglish, and regional languages to English.
-                </p>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-reply text-amber-500 text-xl"></i>
+                <!-- Feature 3 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition">
+                        <i class="fas fa-language text-blue-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Multi-Language Translation</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Auto-detect and translate comments from any language to English. Handles Tanglish, Hinglish, and mixed-script text.</p>
                 </div>
-                <h3 class="font-semibold text-gray-800 mb-2">Direct Reply</h3>
-                <p class="text-sm text-gray-500">
-                    Reply to YouTube and Facebook comments directly from the dashboard without switching platforms.
-                </p>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-chart-bar text-blue-500 text-xl"></i>
+                <!-- Feature 4 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-amber-100 transition">
+                        <i class="fas fa-reply text-amber-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Direct Reply to Comments</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Reply to YouTube and Facebook comments directly from the dashboard. OAuth integration posts replies to the actual platform.</p>
                 </div>
-                <h3 class="font-semibold text-gray-800 mb-2">Analytics Dashboard</h3>
-                <p class="text-sm text-gray-500">
-                    Visualize comment trends, sentiment distribution, platform breakdown, and engagement metrics.
-                </p>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
-                    <i class="fas fa-users text-purple-500 text-xl"></i>
+                <!-- Feature 5 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-100 transition">
+                        <i class="fas fa-chart-pie text-purple-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Analytics Dashboard</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Visual charts for sentiment trends, platform breakdown, comment volume over time, and engagement metrics at a glance.</p>
                 </div>
-                <h3 class="font-semibold text-gray-800 mb-2">Team Management</h3>
-                <p class="text-sm text-gray-500">
-                    Manage multiple companies, users, roles, and permissions with a flexible designation system.
-                </p>
+                <!-- Feature 6 -->
+                <div class="group bg-white rounded-2xl p-6 border border-gray-100 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-50 transition-all duration-300">
+                    <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-rose-100 transition">
+                        <i class="fas fa-address-card text-rose-600 text-xl"></i>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Auto Lead Extraction</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Automatically detect and extract phone numbers and email addresses from comments. Build your contact list from social interactions.</p>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Platforms -->
-    <section class="bg-white border-t border-b border-gray-100 py-16">
-        <div class="max-w-6xl mx-auto px-6 text-center">
-            <h2 class="text-2xl font-bold text-gray-800 mb-8">Supported Platforms</h2>
-            <div class="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center">
+    <!-- ════════════ HOW IT WORKS ════════════ -->
+    <section id="how-it-works" class="bg-gradient-to-b from-gray-50 to-white py-20">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900">How It Works</h2>
+                <p class="mt-4 text-gray-500">Get started in three simple steps</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                        <span class="text-2xl font-extrabold text-indigo-600">1</span>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Connect Your Pages</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Link your YouTube channels, Facebook pages, Instagram accounts, LinkedIn, and Twitter with API keys or OAuth.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                        <span class="text-2xl font-extrabold text-emerald-600">2</span>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Sync & Analyze</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">Comments are fetched automatically. AI analyzes sentiment, detects leads, translates languages, and flags important messages.</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                        <span class="text-2xl font-extrabold text-amber-600">3</span>
+                    </div>
+                    <h3 class="font-bold text-gray-900 mb-2">Monitor & Respond</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed">View all comments in one dashboard. Reply directly, track sentiment trends, export contacts, and manage your team.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════ PLATFORMS ════════════ -->
+    <section id="platforms" class="bg-white py-20 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900">Supported Platforms</h2>
+                <p class="mt-4 text-gray-500">Monitor comments across all major social media platforms</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-lg hover:border-red-200 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:bg-red-100 transition">
                         <i class="fab fa-youtube text-red-600 text-2xl"></i>
                     </div>
-                    <span class="text-xs font-medium text-gray-500">YouTube</span>
+                    <h4 class="font-semibold text-gray-800 text-sm">YouTube</h4>
+                    <p class="text-[11px] text-gray-400 mt-1">Videos & Comments</p>
                 </div>
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center">
+                <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-lg hover:border-blue-200 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-100 transition">
                         <i class="fab fa-facebook-f text-blue-600 text-2xl"></i>
                     </div>
-                    <span class="text-xs font-medium text-gray-500">Facebook</span>
+                    <h4 class="font-semibold text-gray-800 text-sm">Facebook</h4>
+                    <p class="text-[11px] text-gray-400 mt-1">Page Posts & Comments</p>
                 </div>
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center">
+                <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-lg hover:border-pink-200 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:bg-pink-100 transition">
                         <i class="fab fa-instagram text-pink-600 text-2xl"></i>
                     </div>
-                    <span class="text-xs font-medium text-gray-500">Instagram</span>
+                    <h4 class="font-semibold text-gray-800 text-sm">Instagram</h4>
+                    <p class="text-[11px] text-gray-400 mt-1">Media & Comments</p>
                 </div>
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-14 h-14 bg-sky-50 rounded-2xl flex items-center justify-center">
+                <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-lg hover:border-sky-200 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-sky-50 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:bg-sky-100 transition">
                         <i class="fab fa-linkedin-in text-sky-700 text-2xl"></i>
                     </div>
-                    <span class="text-xs font-medium text-gray-500">LinkedIn</span>
+                    <h4 class="font-semibold text-gray-800 text-sm">LinkedIn</h4>
+                    <p class="text-[11px] text-gray-400 mt-1">Posts & Comments</p>
                 </div>
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
+                <div class="bg-white border border-gray-100 rounded-2xl p-6 text-center hover:shadow-lg hover:border-gray-300 transition-all duration-300 group col-span-2 md:col-span-1">
+                    <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3 group-hover:bg-gray-200 transition">
                         <i class="fab fa-x-twitter text-gray-800 text-2xl"></i>
                     </div>
-                    <span class="text-xs font-medium text-gray-500">Twitter / X</span>
+                    <h4 class="font-semibold text-gray-800 text-sm">Twitter / X</h4>
+                    <p class="text-[11px] text-gray-400 mt-1">Tweets & Replies</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-50 border-t border-gray-100">
-        <div class="max-w-6xl mx-auto px-6 py-10">
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-chart-line text-white text-xs"></i>
+    <!-- ════════════ CTA ════════════ -->
+    <section class="bg-gradient-to-br from-indigo-600 to-violet-700 py-16">
+        <div class="max-w-3xl mx-auto px-6 text-center">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-white">Ready to Monitor Your Social Media?</h2>
+            <p class="mt-4 text-indigo-200 text-lg">Start tracking, analyzing, and responding to your audience today. Free to get started.</p>
+            <div class="mt-8 flex items-center justify-center gap-4">
+                <a href="{{ url_for('auth.signup') }}"
+                   class="px-8 py-3.5 text-sm font-semibold text-indigo-700 bg-white rounded-xl hover:bg-indigo-50 shadow-lg transition inline-flex items-center gap-2">
+                    <i class="fas fa-rocket"></i> Get Started Free
+                </a>
+                <a href="{{ url_for('auth.login') }}"
+                   class="px-8 py-3.5 text-sm font-semibold text-white border-2 border-white/30 rounded-xl hover:bg-white/10 transition inline-flex items-center gap-2">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ════════════ FOOTER ════════════ -->
+    <footer class="bg-gray-900 text-gray-400">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8 py-14">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                <!-- Brand -->
+                <div class="md:col-span-1">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-9 h-9 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-chart-line text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white">User Monitor</span>
                     </div>
-                    <span class="font-semibold text-gray-700">User Monitor</span>
+                    <p class="text-sm leading-relaxed">Social media comment monitoring and analytics platform for teams.</p>
+                    <!-- Social icons -->
+                    <div class="flex items-center gap-3 mt-5">
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition">
+                            <i class="fab fa-facebook-f text-xs"></i>
+                        </a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition">
+                            <i class="fab fa-linkedin-in text-xs"></i>
+                        </a>
+                        <a href="#" class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center hover:bg-indigo-600 transition">
+                            <i class="fab fa-instagram text-xs"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="flex items-center gap-6 text-sm text-gray-500">
-                    <a href="{{ url_for('public.privacy') }}" class="hover:text-indigo-600 transition">Privacy Policy</a>
-                    <a href="{{ url_for('public.terms') }}" class="hover:text-indigo-600 transition">Terms & Conditions</a>
-                    <a href="{{ url_for('public.cookies') }}" class="hover:text-indigo-600 transition">Cookie Policy</a>
+
+                <!-- Features -->
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Features</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="#features" class="hover:text-white transition">Comment Monitoring</a></li>
+                        <li><a href="#features" class="hover:text-white transition">Sentiment Analysis</a></li>
+                        <li><a href="#features" class="hover:text-white transition">Translation</a></li>
+                        <li><a href="#features" class="hover:text-white transition">Analytics Dashboard</a></li>
+                        <li><a href="#features" class="hover:text-white transition">Lead Extraction</a></li>
+                    </ul>
+                </div>
+
+                <!-- Resources -->
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Resources</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="#how-it-works" class="hover:text-white transition">How It Works</a></li>
+                        <li><a href="#platforms" class="hover:text-white transition">Supported Platforms</a></li>
+                        <li><a href="{{ url_for('auth.signup') }}" class="hover:text-white transition">Get Started</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="hover:text-white transition">Login</a></li>
+                    </ul>
+                </div>
+
+                <!-- Company -->
+                <div>
+                    <h4 class="text-sm font-semibold text-white mb-4">Company</h4>
+                    <ul class="space-y-2.5 text-sm">
+                        <li><a href="{{ url_for('public.privacy') }}" class="hover:text-white transition">Privacy Policy</a></li>
+                        <li><a href="{{ url_for('public.terms') }}" class="hover:text-white transition">Terms of Service</a></li>
+                        <li><a href="{{ url_for('public.cookies') }}" class="hover:text-white transition">Cookie Policy</a></li>
+                    </ul>
                 </div>
             </div>
-            <div class="mt-6 text-center text-xs text-gray-400">
-                &copy; {{ now().year if now is defined else '2026' }} User Monitor. All rights reserved.
+        </div>
+
+        <!-- Bottom bar -->
+        <div class="border-t border-gray-800">
+            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm">&copy; 2026 User Monitor. All rights reserved.</p>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="{{ url_for('public.privacy') }}" class="hover:text-white transition">Privacy Policy</a>
+                    <a href="{{ url_for('public.terms') }}" class="hover:text-white transition">Terms of Service</a>
+                    <a href="{{ url_for('public.cookies') }}" class="hover:text-white transition">Cookie &amp; Policy</a>
+                </div>
             </div>
         </div>
     </footer>
+
 </div>
 {% endblock %}
