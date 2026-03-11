@@ -4,112 +4,194 @@
 {% block head %}
 <meta name="description" content="Privacy Policy for User Monitor — how we collect, use, and protect your data.">
 <meta property="og:title" content="Privacy Policy — User Monitor">
-<meta property="og:description" content="Privacy Policy for User Monitor social media monitoring dashboard.">
 <meta property="og:type" content="website">
 {% endblock %}
 
 {% block auth_content %}
-<div class="min-h-screen">
+<div class="min-h-screen bg-white">
     <!-- Navigation -->
-    <nav class="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="{{ url_for('public.home') }}" class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-                    <i class="fas fa-chart-line text-white text-sm"></i>
+    <nav class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="{{ url_for('public.home') }}" class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200/50">
+                        <i class="fas fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900">User Monitor</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <a href="{{ url_for('auth.login') }}" class="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-indigo-600 transition">Login</a>
+                    <a href="{{ url_for('auth.signup') }}" class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition">Get Started</a>
                 </div>
-                <span class="text-xl font-bold text-gray-800">User Monitor</span>
-            </a>
-            <a href="{{ url_for('auth.login') }}"
-               class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 transition">Log In</a>
+            </div>
         </div>
     </nav>
 
     <!-- Content -->
-    <div class="max-w-4xl mx-auto px-6 py-12">
-        <h1 class="text-3xl font-extrabold text-gray-900 mb-2">Privacy Policy</h1>
-        <p class="text-sm text-gray-400 mb-8">Last updated: March 2026</p>
+    <div class="max-w-4xl mx-auto px-6 py-14">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">Privacy Policy</h1>
+        <p class="text-sm text-gray-400 mb-10">Effective Date: March 2026 &middot; Last Updated: March 2026</p>
 
-        <div class="prose prose-gray max-w-none space-y-6 text-gray-600 text-sm leading-relaxed">
-            <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">1. Information We Collect</h2>
-                <p>We collect the following types of information when you use User Monitor:</p>
-                <ul class="list-disc pl-6 space-y-1 mt-2">
-                    <li><strong>Account Information:</strong> Name, email address, and password when you create an account.</li>
-                    <li><strong>Social Media Data:</strong> Comments, posts, author names, and engagement metrics fetched from your connected social media accounts (YouTube, Facebook, Instagram, LinkedIn, Twitter) via their official APIs.</li>
-                    <li><strong>API Credentials:</strong> OAuth tokens and API keys you provide to connect your social media accounts. These are stored securely and used solely for API access.</li>
-                    <li><strong>Usage Data:</strong> Log data such as pages visited, features used, and actions taken within the dashboard.</li>
+        <div class="space-y-8 text-gray-600 text-[15px] leading-relaxed">
+
+            <!-- Principles -->
+            <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-6">
+                <h3 class="font-bold text-indigo-900 mb-3">Our Privacy Principles</h3>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <li class="flex items-start gap-2"><i class="fas fa-shield-alt text-indigo-500 mt-1 text-sm"></i><span>We do not sell or rent your personal data to anyone.</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-database text-indigo-500 mt-1 text-sm"></i><span>We only collect information essential to provide our service.</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-user-lock text-indigo-500 mt-1 text-sm"></i><span>You retain full control over your data, including the right to delete it.</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-lock text-indigo-500 mt-1 text-sm"></i><span>We use industry-standard security measures to protect your information.</span></li>
                 </ul>
+            </div>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">1. Scope and Purpose</h2>
+                <p>This Privacy Policy applies to all users of the User Monitor platform and website. By accessing or using our service, you acknowledge that you have read and understood this Privacy Policy. Continued use of the platform constitutes agreement with these practices.</p>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">2. How We Use Your Information</h2>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">2. Information We Collect</h2>
+
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Account Data</h3>
                 <ul class="list-disc pl-6 space-y-1">
-                    <li>To provide and maintain the User Monitor service.</li>
-                    <li>To fetch, display, and analyze comments from your connected social media pages.</li>
-                    <li>To perform sentiment analysis and translations on comments.</li>
-                    <li>To enable you to reply to comments directly from the dashboard.</li>
-                    <li>To send you service-related notifications (e.g., email verification).</li>
-                    <li>To improve our service and fix bugs.</li>
+                    <li>Name, email address, and encrypted passwords</li>
+                    <li>Company name (optional)</li>
+                    <li>Role and designation within your organization</li>
                 </ul>
+
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Social Media Data</h3>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>Comments, posts, author names, and engagement metrics fetched from your connected social media accounts (YouTube, Facebook, Instagram, LinkedIn, Twitter) via their official APIs</li>
+                    <li>OAuth tokens and API keys you provide to connect your social media accounts</li>
+                    <li>Sync timestamps and comment counts</li>
+                </ul>
+
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Usage and Technical Data</h3>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>Browser type, IP address, operating system, and device type</li>
+                    <li>Pages visited, features used, and actions taken within the dashboard</li>
+                    <li>Comment analysis results (sentiment scores, translations)</li>
+                </ul>
+
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Cookies and Session Data</h3>
+                <p>We use cookies for secure login, session tracking, and CSRF protection. See our <a href="{{ url_for('public.cookies') }}" class="text-indigo-600 hover:underline">Cookie Policy</a> for full details.</p>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">3. Data Sharing</h2>
-                <p>We do <strong>not</strong> sell, trade, or rent your personal data to third parties. We may share data with:</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">3. How We Use Your Information</h2>
+                <ul class="list-disc pl-6 space-y-1">
+                    <li>To provide, maintain, and improve the User Monitor service</li>
+                    <li>To fetch, display, and analyze comments from your connected social media pages</li>
+                    <li>To perform AI-powered sentiment analysis and language translations on comments</li>
+                    <li>To enable you to reply to comments directly from the dashboard</li>
+                    <li>To automatically detect and extract contact information (leads) from comments</li>
+                    <li>To send service-related communications (email verification, password resets)</li>
+                    <li>To maintain security, prevent fraud, and ensure platform stability</li>
+                    <li>To comply with legal obligations</li>
+                </ul>
+                <p class="mt-3">Your data is <strong>not</strong> used for third-party marketing or advertising purposes.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">4. Data Sharing</h2>
+                <p>We do <strong>not</strong> sell, trade, or rent your personal data. We may share data only with:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
-                    <li><strong>Social Media Platforms:</strong> When you reply to comments or perform actions, data is sent to the respective platform via their API.</li>
+                    <li><strong>Social Media Platforms:</strong> When you reply to comments or perform actions, data is sent to the respective platform (YouTube, Facebook, etc.) via their official API.</li>
                     <li><strong>Translation Services:</strong> Comment text may be sent to Google Translate for translation purposes.</li>
-                    <li><strong>AI/NLP Services:</strong> Comment text may be processed by AI services (e.g., OpenAI GPT) for sentiment analysis, if configured.</li>
+                    <li><strong>AI Services:</strong> Comment text may be processed by AI services (e.g., OpenAI GPT) for sentiment analysis, if configured by your administrator.</li>
+                    <li><strong>Legal Authorities:</strong> When required by law, regulation, or legal process.</li>
+                    <li><strong>Internal Authorized Personnel:</strong> Team members with appropriate role-based access within your organization.</li>
                 </ul>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">4. Data Storage & Security</h2>
-                <p>Your data is stored securely. API keys and OAuth tokens are stored in our database. We use HTTPS encryption for all data in transit. Access to the application is protected by authentication and role-based permissions.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">5. Data Retention</h2>
+                <p>We retain your data for as long as your account is active. Upon account deletion:</p>
+                <ul class="list-disc pl-6 space-y-1 mt-2">
+                    <li>Synced comments, posts, and analysis data are removed within 60 days</li>
+                    <li>API credentials and OAuth tokens are deleted immediately</li>
+                    <li>System logs may be retained as required by law</li>
+                </ul>
+                <p class="mt-2">You may request deletion of your account and associated data at any time by contacting your administrator.</p>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">5. Data Retention</h2>
-                <p>We retain your data for as long as your account is active. You may request deletion of your account and associated data by contacting us. Social media comments synced to our system are retained until you delete them or disconnect the page.</p>
-            </section>
-
-            <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">6. Your Rights</h2>
-                <ul class="list-disc pl-6 space-y-1">
-                    <li>Access, update, or delete your personal information.</li>
-                    <li>Disconnect social media accounts at any time.</li>
-                    <li>Request export of your data.</li>
-                    <li>Withdraw consent for data processing.</li>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">6. Data Security</h2>
+                <p>We implement industry-standard security measures to protect your data:</p>
+                <ul class="list-disc pl-6 space-y-1 mt-2">
+                    <li>HTTPS encryption for all data in transit</li>
+                    <li>Secure cloud infrastructure hosting</li>
+                    <li>Encrypted password storage (hashed with salt)</li>
+                    <li>CSRF protection on all form submissions and API calls</li>
+                    <li>Role-based access controls and permission management</li>
+                    <li>OAuth tokens stored securely in the database</li>
                 </ul>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">7. Cookies</h2>
-                <p>We use cookies for session management and authentication. See our <a href="{{ url_for('public.cookies') }}" class="text-indigo-600 hover:underline">Cookie Policy</a> for more details.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">7. Your Rights</h2>
+                <p>You have the right to:</p>
+                <ul class="list-disc pl-6 space-y-1 mt-2">
+                    <li>Access the personal data we hold about you</li>
+                    <li>Request corrections to inaccurate information</li>
+                    <li>Request deletion of your account and data</li>
+                    <li>Disconnect social media accounts at any time</li>
+                    <li>Withdraw consent for non-essential data processing</li>
+                    <li>Opt out of non-critical communications</li>
+                    <li>Export your data</li>
+                </ul>
+                <p class="mt-2">Requests will be addressed within 7–10 working days.</p>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">8. Changes to This Policy</h2>
-                <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated revision date.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">8. International Operations</h2>
+                <p>User Monitor operates from India. Your data is processed and stored in India under applicable Indian data protection laws. By using the service, you consent to the transfer and processing of your data in India.</p>
             </section>
 
             <section>
-                <h2 class="text-lg font-semibold text-gray-800 mt-8 mb-3">9. Contact Us</h2>
-                <p>If you have any questions about this Privacy Policy, please contact us at the email address associated with your account administrator.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">9. Children's Privacy</h2>
+                <p>User Monitor is not intended for users under the age of 18. We do not knowingly collect personal information from minors. If we discover that data has been collected from a user under 18, it will be deleted immediately.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">10. Third-Party Links</h2>
+                <p>Our platform may contain links to external websites (social media platforms, Google services, etc.). We are not responsible for the privacy practices of these external sites. We encourage you to review their privacy policies independently.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">11. Changes to This Policy</h2>
+                <p>We may update this Privacy Policy from time to time. Material changes will be communicated via email or platform notifications. Continued use of the service after changes constitutes acceptance of the updated policy.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">12. Grievance Officer</h2>
+                <p>In accordance with IT Rules 2021, a Grievance Officer is available to address any concerns regarding data privacy. The officer is reachable Monday–Friday, 10:00 AM–6:00 PM (IST) via the contact information below.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">13. Contact Us</h2>
+                <p>If you have any questions or concerns about this Privacy Policy, please contact us:</p>
+                <div class="mt-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <p><strong>Email:</strong> support@usermonitor.app</p>
+                    <p><strong>Platform:</strong> Contact your account administrator</p>
+                </div>
             </section>
         </div>
     </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-50 border-t border-gray-100 mt-12">
-        <div class="max-w-4xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-6 text-sm text-gray-500">
-                <a href="{{ url_for('public.home') }}" class="hover:text-indigo-600 transition">Home</a>
-                <a href="{{ url_for('public.privacy') }}" class="text-indigo-600 font-medium">Privacy Policy</a>
-                <a href="{{ url_for('public.terms') }}" class="hover:text-indigo-600 transition">Terms & Conditions</a>
-                <a href="{{ url_for('public.cookies') }}" class="hover:text-indigo-600 transition">Cookie Policy</a>
+    <footer class="bg-gray-900 text-gray-400">
+        <div class="border-t border-gray-800">
+            <div class="max-w-7xl mx-auto px-6 lg:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm">&copy; 2026 User Monitor. All rights reserved.</p>
+                <div class="flex items-center gap-6 text-sm">
+                    <a href="{{ url_for('public.home') }}" class="hover:text-white transition">Home</a>
+                    <a href="{{ url_for('public.privacy') }}" class="text-white font-medium">Privacy Policy</a>
+                    <a href="{{ url_for('public.terms') }}" class="hover:text-white transition">Terms of Service</a>
+                    <a href="{{ url_for('public.cookies') }}" class="hover:text-white transition">Cookie Policy</a>
+                </div>
             </div>
-            <div class="text-xs text-gray-400">&copy; 2026 User Monitor</div>
         </div>
     </footer>
 </div>
