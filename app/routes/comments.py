@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.comment import Comment
 from app.models.post import Post
@@ -32,7 +33,7 @@ def index():
     page, per_page = get_pagination_args()
     company_id = current_user.company_id
 
-    query = Comment.query.filter_by(company_id=company_id, is_deleted=False)
+    query = Comment.query.options(joinedload(Comment.post)).filter_by(company_id=company_id, is_deleted=False)
 
     # Filters
     platform = request.args.get("platform")

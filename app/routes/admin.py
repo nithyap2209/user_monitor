@@ -82,6 +82,17 @@ def save_api_key(company_id):
     key.page_id = request.form.get("page_id", "").strip() or None
     key.is_active = True
 
+    # Handle YouTube OAuth Client ID (stored in extra_data JSON)
+    oauth_client_id = request.form.get("oauth_client_id", "").strip()
+    if platform == "youtube" and oauth_client_id:
+        extra = key.extra_data or {}
+        extra["oauth_client_id"] = oauth_client_id
+        key.extra_data = extra
+    elif platform == "youtube" and not oauth_client_id:
+        extra = key.extra_data or {}
+        extra.pop("oauth_client_id", None)
+        key.extra_data = extra if extra else None
+
     db.session.commit()
     flash(f"{PLATFORM_LABELS.get(platform, platform)} API key saved.", "success")
     return redirect(url_for("admin.company_api_keys", company_id=company_id))

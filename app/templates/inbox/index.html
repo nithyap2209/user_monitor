@@ -1,6 +1,44 @@
 {% extends 'base.html' %}
 {% block title %}Comment Inbox — User Monitor{% endblock %}
 
+{% block head %}
+<style>
+/* Critical inbox layout — rendered before Tailwind CDN to prevent FOUC */
+@media (min-width: 768px) {
+    .inbox-split {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow: hidden !important;
+        height: calc(100vh - 16rem);
+    }
+    .inbox-split-left {
+        width: 33.333% !important;
+        flex-shrink: 0 !important;
+        overflow-y: auto !important;
+        border-right: 1px solid #e5e7eb;
+        min-width: 0 !important;
+    }
+    .inbox-split-right {
+        display: block !important;
+        width: 66.666% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        min-width: 0 !important;
+        padding: 1.5rem;
+    }
+}
+/* Hide right panel on mobile when no comment selected */
+.inbox-split-right.inbox-right-empty {
+    display: none;
+}
+@media (min-width: 768px) {
+    .inbox-split-right.inbox-right-empty {
+        display: block !important;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Header -->
 <div class="mb-6">
@@ -89,10 +127,10 @@
 
 {% if comments %}
 <!-- Split Panel Layout -->
-<div class="flex flex-col md:flex-row bg-white rounded-xl shadow-sm border md:overflow-hidden md:h-[calc(100vh-16rem)]">
+<div class="inbox-split flex flex-col md:flex-row bg-white rounded-xl shadow-sm border md:overflow-hidden md:h-[calc(100vh-16rem)]">
 
     <!-- LEFT PANEL: Comment List -->
-    <div class="{% if explicit_active %}hidden md:block{% endif %} w-full md:w-1/3 md:overflow-y-auto border-b md:border-b-0 md:border-r border-gray-200">
+    <div class="inbox-split-left {% if explicit_active %}hidden md:block{% endif %} w-full md:w-1/3 md:flex-shrink-0 md:overflow-y-auto border-b md:border-b-0 md:border-r border-gray-200 min-w-0">
         {% for comment in comments %}
         <a href="?filter={{ filter_type }}&active={{ comment.id }}{{ filter_qs }}"
            class="block px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition cursor-pointer
@@ -163,7 +201,7 @@
     </div>
 
     <!-- RIGHT PANEL: Selected Comment Detail -->
-    <div class="{% if not explicit_active %}hidden md:flex md:items-center md:justify-center{% endif %} w-full md:w-2/3 md:overflow-y-auto p-4 md:p-6">
+    <div class="inbox-split-right {% if not explicit_active %}inbox-right-empty{% endif %} w-full md:w-2/3 md:overflow-y-auto md:overflow-x-hidden p-4 md:p-6 min-w-0">
         {% if active_comment %}
 
         <!-- Back button (mobile only) -->
@@ -203,8 +241,8 @@
         </div>
 
         <!-- Full Comment Text -->
-        <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <p class="text-sm text-gray-700 whitespace-pre-line">{{ active_comment.comment_text }}</p>
+        <div class="bg-gray-50 rounded-lg p-4 mb-4 overflow-hidden">
+            <p class="text-sm text-gray-700 whitespace-pre-line break-words">{{ active_comment.comment_text }}</p>
         </div>
 
         <!-- Sentiment + Language -->
@@ -241,14 +279,14 @@
                 <div class="flex items-center gap-1">
                     <span class="text-xs text-gray-500">From:</span>
                     <select id="source-lang-{{ active_comment.id }}"
-                            class="source-lang-select px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            class="source-lang-select max-w-[160px] px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                         <option value="auto" selected>Auto Detect</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-1">
                     <span class="text-xs text-gray-500">To:</span>
                     <select id="target-lang-{{ active_comment.id }}"
-                            class="translate-lang-select px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            class="translate-lang-select max-w-[160px] px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
                         <option value="">Select language...</option>
                     </select>
                 </div>
@@ -360,7 +398,7 @@
 
         {% else %}
         <!-- No active comment selected -->
-        <div class="flex flex-col items-center justify-center w-full text-center py-16">
+        <div class="flex flex-col items-center justify-center w-full h-full text-center py-16">
             <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                 <i class="fas fa-hand-pointer text-2xl text-gray-400"></i>
             </div>

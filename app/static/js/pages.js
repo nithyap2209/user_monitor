@@ -305,6 +305,10 @@ function handleSyncEvent(event) {
     var itemWord = currentSyncPlatform === 'youtube' ? 'videos' : 'posts';
 
     switch (event.type) {
+        case 'phase':
+            document.getElementById('syncProgressText').textContent = event.message || 'Working...';
+            break;
+
         case 'start':
             document.getElementById('syncProgressText').textContent =
                 'Found ' + event.total + ' ' + itemWord + ', syncing...';

@@ -232,6 +232,17 @@
                     </a>
                 </div>
 
+                <!-- YouTube OAuth -->
+                <div class="border-t pt-4 mb-5">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">YouTube (OAuth for replies)</p>
+                    <a href="{{ url_for('pages.connect_youtube_oauth') }}"
+                       class="flex items-center gap-3 w-full px-4 py-3 border rounded-lg text-sm font-medium hover:bg-red-50 hover:border-red-300 transition">
+                        <i class="fab fa-youtube text-red-600 text-lg w-6 text-center"></i>
+                        <span class="text-gray-700">Connect YouTube OAuth</span>
+                        <span class="text-[10px] text-gray-400 ml-auto">Required for posting replies</span>
+                    </a>
+                </div>
+
                 <!-- Manual Connect (other platforms) -->
                 <div class="border-t pt-4">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Manual Connect</p>

@@ -139,8 +139,17 @@
             {% block auth_form %}{% endblock %}
         </div>
 
+        <!-- Footer links -->
+        <div class="mt-8 flex items-center justify-center gap-4 text-xs text-gray-400">
+            <a href="{{ url_for('public.privacy') }}" class="hover:text-indigo-600 transition">Privacy</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('public.terms') }}" class="hover:text-indigo-600 transition">Terms</a>
+            <span>&middot;</span>
+            <a href="{{ url_for('public.cookies') }}" class="hover:text-indigo-600 transition">Cookies</a>
+        </div>
+
         <!-- Mobile-only platform strip -->
-        <div class="lg:hidden mt-8 flex items-center justify-center gap-3 opacity-40">
+        <div class="lg:hidden mt-4 flex items-center justify-center gap-3 opacity-40">
             <i class="fab fa-facebook text-gray-400 text-lg"></i>
             <i class="fab fa-instagram text-gray-400 text-lg"></i>
             <i class="fab fa-youtube text-gray-400 text-lg"></i>

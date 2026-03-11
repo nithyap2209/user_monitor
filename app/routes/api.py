@@ -49,6 +49,8 @@ def dashboard_stats():
     platform = request.args.get("platform")
     page_id = request.args.get("page_id", type=int)
     post_id = request.args.get("post_id", type=int)
+    date_from = request.args.get("date_from")  # YYYY-MM-DD
+    date_to = request.args.get("date_to")      # YYYY-MM-DD
 
     # Build base queries with filters
     post_query = Post.query.filter_by(company_id=company_id)
@@ -67,6 +69,20 @@ def dashboard_stats():
     if post_id:
         post_query = post_query.filter_by(id=post_id)
         comment_query = comment_query.filter_by(post_id=post_id)
+    if date_from:
+        try:
+            dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+            post_query = post_query.filter(Post.posted_at >= dt_from)
+            comment_query = comment_query.filter(Comment.commented_at >= dt_from)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            post_query = post_query.filter(Post.posted_at <= dt_to)
+            comment_query = comment_query.filter(Comment.commented_at <= dt_to)
+        except ValueError:
+            pass
 
     # KPI stats
     total_posts = post_query.count()
@@ -90,6 +106,16 @@ def dashboard_stats():
         contact_query = contact_query.filter_by(platform=platform)
     if post_id:
         contact_query = contact_query.filter_by(source_post_id=post_id)
+    if date_from:
+        try:
+            contact_query = contact_query.filter(Contact.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            contact_query = contact_query.filter(Contact.created_at <= datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
     total_contacts = contact_query.count()
 
     # Sentiment distribution
@@ -106,6 +132,16 @@ def dashboard_stats():
         )
     if post_id:
         sentiment_base = sentiment_base.filter_by(post_id=post_id)
+    if date_from:
+        try:
+            sentiment_base = sentiment_base.filter(Comment.commented_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            sentiment_base = sentiment_base.filter(Comment.commented_at <= datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
 
     sentiments = (
         db.session.query(Comment.sentiment, db.func.count(Comment.id))
@@ -134,6 +170,14 @@ def dashboard_stats():
         )
         .group_by(db.func.date(Comment.commented_at))
         .order_by(db.func.date(Comment.commented_at))
+        .all()
+    )
+
+    # Actual comment counts by platform (from Comment table, matches KPI)
+    comment_platform_rows = (
+        db.session.query(Comment.platform, db.func.count(Comment.id))
+        .filter(Comment.id.in_(comment_query.with_entities(Comment.id)))
+        .group_by(Comment.platform)
         .all()
     )
 
@@ -180,6 +224,7 @@ def dashboard_stats():
             "unreplied_comments": unreplied_comments,
             "total_contacts": total_contacts,
         },
+        "comment_platforms": {p: c for p, c in comment_platform_rows},
         "sentiment": {s or "unknown": c for s, c in sentiments},
         "platforms": {p: c for p, c in platforms},
         "timeline": {str(d): c for d, c in comments_timeline} if comments_timeline else {},
@@ -234,6 +279,8 @@ def dashboard_keywords():
     platform = request.args.get("platform")
     page_id = request.args.get("page_id", type=int)
     post_id = request.args.get("post_id", type=int)
+    date_from = request.args.get("date_from")
+    date_to = request.args.get("date_to")
     top_n = request.args.get("top_n", 30, type=int)
 
     query = Comment.query.filter_by(company_id=company_id, is_deleted=False)
@@ -247,6 +294,16 @@ def dashboard_keywords():
         )
     if post_id:
         query = query.filter_by(post_id=post_id)
+    if date_from:
+        try:
+            query = query.filter(Comment.commented_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            query = query.filter(Comment.commented_at <= datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59))
+        except ValueError:
+            pass
 
     comments = [
         c.comment_text
@@ -316,15 +373,48 @@ def reply_comment(comment_id):
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json(silent=True) or {}
-    reply_text = data.get("reply", "")
+    reply_text = data.get("reply", "").strip()
+    if not reply_text:
+        return jsonify({"error": "Reply text is required."}), 400
 
-    # TODO: Actually post reply via platform API
+    platform_posted = False
+    platform_error = None
+    comment_deleted = False
+
+    # Post reply via platform API
+    if comment.platform == "youtube" and comment.platform_comment_id:
+        try:
+            from app.services.youtube_service import YouTubeService
+            yt = YouTubeService(comment.company_id)
+            yt_result = yt.reply_to_comment(comment.platform_comment_id, reply_text)
+            platform_posted = yt_result.get("success", False)
+            if not platform_posted:
+                platform_error = yt_result.get("error", "Unknown YouTube error")
+                comment_deleted = yt_result.get("not_found", False)
+                current_app.logger.error(f"YouTube reply failed: {platform_error}")
+        except Exception as e:
+            current_app.logger.error(f"YouTube reply error: {e}")
+            platform_error = f"YouTube API error: {str(e)[:100]}"
+
+    # If the comment was deleted on YouTube, don't save locally
+    if comment_deleted:
+        return jsonify({"success": False, "error": platform_error}), 200
+
     comment.is_replied = True
     comment.replied_by = current_user.id
     comment.replied_at = datetime.now(timezone.utc)
     comment.reply_text = reply_text
     db.session.commit()
-    return jsonify({"success": True, "message": "Reply sent."})
+
+    result = {"success": True}
+    if platform_posted:
+        result["message"] = "Reply posted to YouTube successfully!"
+    elif platform_error:
+        result["message"] = f"{platform_error} — Reply saved locally."
+        result["warning"] = True
+    else:
+        result["message"] = "Reply saved."
+    return jsonify(result)
 
 
 @api_bp.route("/comments/<int:comment_id>/hide", methods=["POST"])
@@ -701,19 +791,21 @@ def author_reanalyze(author_name):
 @api_bp.route("/comments/reanalyze-all", methods=["POST"])
 @login_required
 def reanalyze_all_comments():
-    """Re-analyze sentiment for all neutral comments using improved heuristic.
+    """Re-analyze sentiment for ALL comments using GPT → Claude → VADER+TextBlob.
 
     Uses SSE streaming to send progress updates so the request doesn't timeout.
-    Skips Google Translate for speed (uses keyword + emoji matching).
+    Processes every comment (not just neutral) since the NLP algorithm may
+    reclassify previously mis-categorized comments.
+    When OPENAI_API_KEY is set, uses GPT for accurate Tanglish/multilingual analysis.
+    Falls back to VADER+TextBlob ensemble when no API keys are available.
     """
-    from app.services.ai_service import _heuristic_sentiment
+    from app.services.ai_service import analyze_sentiment as _analyze
 
     company_id = current_user.company_id
     comment_ids = [
         c.id for c in db.session.query(Comment.id).filter(
             Comment.company_id == company_id,
             Comment.is_deleted == False,
-            Comment.sentiment == "neutral",
         ).all()
     ]
     total = len(comment_ids)
@@ -731,13 +823,13 @@ def reanalyze_all_comments():
 
             for comment in batch:
                 try:
-                    result = _heuristic_sentiment(
-                        comment.comment_text, skip_translate=True
-                    )
+                    result = _analyze(comment.comment_text)
                     new_sentiment = result.get("sentiment", "neutral")
-                    if new_sentiment != "neutral":
+                    new_score = result.get("score", 0.5)
+                    if (new_sentiment != comment.sentiment
+                            or abs((comment.sentiment_score or 0.5) - new_score) > 0.05):
                         comment.sentiment = new_sentiment
-                        comment.sentiment_score = result.get("score", 0.5)
+                        comment.sentiment_score = new_score
                         updated += 1
                 except Exception:
                     pass

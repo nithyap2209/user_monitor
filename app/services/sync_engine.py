@@ -8,6 +8,7 @@ or falls back to company-level CompanyAPIKey credentials.
 import re
 import requests as http_requests
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.extensions import db
 from app.models.connected_page import ConnectedPage
@@ -26,6 +27,15 @@ from app.services.google_reviews import GoogleReviewsService
 import time
 from sqlalchemy.exc import OperationalError
 
+# Reusable session for connection pooling (keeps TCP connections alive)
+_http_session = http_requests.Session()
+_http_session.headers.update({"Connection": "keep-alive"})
+adapter = http_requests.adapters.HTTPAdapter(
+    pool_connections=10, pool_maxsize=20, max_retries=2,
+)
+_http_session.mount("https://", adapter)
+_http_session.mount("http://", adapter)
+
 
 def _safe_commit(max_retries=3, delay=1):
     """Commit with retries to handle SQLite 'database is locked' errors."""
@@ -39,6 +49,35 @@ def _safe_commit(max_retries=3, delay=1):
                 time.sleep(delay)
             else:
                 raise
+
+
+def _mark_owner_replies_for_page(page):
+    """Detect comments replied to by the page owner on the platform.
+
+    When the page owner (whose platform ID is page.page_id) has commented on
+    a post, mark all other non-owner comments on that post as is_replied=True.
+    This ensures the Response Tracker reflects replies made outside the app.
+    """
+    if not page.page_id:
+        return
+
+    # Find post IDs where the page owner has commented
+    owner_post_ids = (
+        db.session.query(Comment.post_id)
+        .filter(
+            Comment.company_id == page.company_id,
+            Comment.platform_author_id == page.page_id,
+        )
+        .distinct()
+        .subquery()
+    )
+
+    # Bulk-update: mark non-owner, unreplied comments on those posts
+    Comment.query.filter(
+        Comment.post_id.in_(db.session.query(owner_post_ids.c.post_id)),
+        Comment.platform_author_id != page.page_id,
+        Comment.is_replied == False,
+    ).update({"is_replied": True}, synchronize_session="fetch")
 
 
 SERVICE_MAP = {
@@ -74,27 +113,20 @@ def get_service(company_id, platform):
     return service_cls(company_id)
 
 
-def _paginate_graph_api(url, params, timeout=60, retries=3):
+def _paginate_graph_api(url, params, timeout=90):
     """Fetch all pages from a Facebook/Instagram Graph API endpoint.
 
     The Graph API returns paginated results with a 'paging.next' URL.
     This helper follows all pages and returns the combined 'data' list.
-    Retries transient network errors with backoff.
+    Connection pooling and retries are handled by the shared _http_session.
     """
     all_data = []
 
-    # First request with retries
-    result = None
-    for attempt in range(retries):
-        try:
-            resp = http_requests.get(url, params=params, timeout=timeout)
-            result = resp.json()
-            break
-        except Exception as e:
-            if attempt < retries - 1:
-                time.sleep(2 * (attempt + 1))
-            else:
-                return all_data, str(e)
+    try:
+        resp = _http_session.get(url, params=params, timeout=timeout)
+        result = resp.json()
+    except Exception as e:
+        return all_data, str(e)
 
     if "error" in result:
         return all_data, result["error"].get("message", "Unknown error")
@@ -107,7 +139,7 @@ def _paginate_graph_api(url, params, timeout=60, retries=3):
         if not next_url:
             break
         try:
-            resp = http_requests.get(next_url, timeout=timeout)
+            resp = _http_session.get(next_url, timeout=timeout)
             result = resp.json()
         except Exception:
             break
@@ -140,16 +172,49 @@ def _sync_facebook(page):
     }
 
     # Fetch all posts (paginated, follows all pages)
+    # Try with insights first; fall back without if the token lacks insights permission
+    _fb_fields_with_insights = "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true),insights.metric(post_impressions){values}"
+    _fb_fields_without_insights = "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true)"
     posts_data, err = _paginate_graph_api(
         f"{GRAPH_API_BASE}/{page.page_id}/posts",
-        params={
-            "access_token": token,
-            "fields": "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true)",
-            "limit": 100,
-        },
+        params={"access_token": token, "fields": _fb_fields_with_insights, "limit": 100},
     )
     if err and not posts_data:
+        # Retry without insights (token may lack page insights permission)
+        posts_data, err = _paginate_graph_api(
+            f"{GRAPH_API_BASE}/{page.page_id}/posts",
+            params={"access_token": token, "fields": _fb_fields_without_insights, "limit": 100},
+        )
+    if err and not posts_data:
         return {"error": f"Failed to fetch posts: {err}"}
+
+    # ── Pre-fetch comments for posts that need them (parallel) ──
+    def _fb_reg_needs_comments(p_data):
+        pid = p_data.get("id", "")
+        ac = (p_data.get("comments") or {}).get("summary", {}).get("total_count", 0)
+        ex = existing_posts.get(pid)
+        if ex:
+            return ex.comments_count != ac and ac > 0
+        return ac > 0
+
+    fb_reg_needing = [p for p in posts_data if _fb_reg_needs_comments(p)]
+    prefetched_fb_reg = {}
+    if fb_reg_needing:
+        def _fetch_fb_reg_comments(pid):
+            data, _ = _paginate_graph_api(
+                f"{GRAPH_API_BASE}/{pid}/comments",
+                params={"access_token": token, "fields": "id,from,message,created_time,like_count",
+                        "filter": "stream", "limit": 100},
+            )
+            return pid, data
+        with ThreadPoolExecutor(max_workers=min(8, len(fb_reg_needing))) as executor:
+            futures = {executor.submit(_fetch_fb_reg_comments, p.get("id", "")): p for p in fb_reg_needing}
+            for future in as_completed(futures):
+                try:
+                    pid, cdata = future.result()
+                    prefetched_fb_reg[pid] = cdata
+                except Exception:
+                    pass
 
     for p in posts_data:
         platform_post_id = p.get("id", "")
@@ -158,6 +223,12 @@ def _sync_facebook(page):
         api_likes = (p.get("likes") or {}).get("summary", {}).get("total_count", 0)
         api_comments = (p.get("comments") or {}).get("summary", {}).get("total_count", 0)
         api_shares = (p.get("shares") or {}).get("count", 0)
+        # Parse views from post insights (post_impressions)
+        api_views = 0
+        for insight in (p.get("insights") or {}).get("data", []):
+            if insight.get("name") == "post_impressions":
+                api_views = (insight.get("values") or [{}])[0].get("value", 0)
+                break
 
         existing = existing_posts.get(platform_post_id)
 
@@ -168,14 +239,12 @@ def _sync_facebook(page):
                 post.likes_count != api_likes
                 or post.comments_count != api_comments
                 or post.shares_count != api_shares
+                or post.views != api_views
             )
             if not counts_changed:
-                # Still check: maybe a previous sync stored the post but
-                # didn't finish fetching all comments (e.g. network error)
                 db_comment_count = Comment.query.filter_by(post_id=post.id).count()
                 if db_comment_count >= api_comments:
                     continue  # truly nothing new
-                # Fall through so missing comments are fetched
 
             likes_changed = post.likes_count != api_likes
             comments_changed = post.comments_count != api_comments or (
@@ -188,6 +257,7 @@ def _sync_facebook(page):
             post.likes_count = api_likes
             post.comments_count = api_comments
             post.shares_count = api_shares
+            post.views = api_views
             post.synced_at = datetime.now(timezone.utc)
         else:
             likes_changed = api_likes > 0
@@ -204,6 +274,7 @@ def _sync_facebook(page):
                 likes_count=api_likes,
                 comments_count=api_comments,
                 shares_count=api_shares,
+                views=api_views,
                 posted_at=_parse_fb_time(p.get("created_time")),
                 synced_at=datetime.now(timezone.utc),
             )
@@ -211,10 +282,6 @@ def _sync_facebook(page):
 
         db.session.flush()  # ensure post.id is set
         stats["posts_synced"] += 1
-
-        # Sync individual reactions (user IDs and names) when likes changed
-        if likes_changed and api_likes > 0:
-            _sync_facebook_reactions(post, page, token)
 
         # Skip comment fetch if comments count unchanged or zero
         if not comments_changed or api_comments == 0:
@@ -228,17 +295,8 @@ def _sync_facebook(page):
             .all()
         )
 
-        # Fetch all comments for this post
-        # filter=stream includes page-owner comments and nested replies
-        comments_data, _ = _paginate_graph_api(
-            f"{GRAPH_API_BASE}/{platform_post_id}/comments",
-            params={
-                "access_token": token,
-                "fields": "id,from,message,created_time,like_count",
-                "filter": "stream",
-                "limit": 100,
-            },
-        )
+        # Use pre-fetched comments (already downloaded in parallel)
+        comments_data = prefetched_fb_reg.get(platform_post_id) or []
 
         pending_contacts = []
         for c in comments_data:
@@ -281,6 +339,9 @@ def _sync_facebook(page):
                 _extract_contact(comment, page.company_id, post.id)
                 stats["contacts_found"] += 1
 
+    # Detect replies made by the page owner on the platform
+    _mark_owner_replies_for_page(page)
+
     # Update page last synced
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
@@ -303,14 +364,18 @@ def sync_facebook_stream(page):
         for p in Post.query.filter_by(connected_page_id=page.id).all()
     }
 
+    _fb_fields_with_insights = "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true),insights.metric(post_impressions){values}"
+    _fb_fields_without_insights = "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true)"
     posts_data, err = _paginate_graph_api(
         f"{GRAPH_API_BASE}/{page.page_id}/posts",
-        params={
-            "access_token": token,
-            "fields": "id,message,created_time,full_picture,shares,permalink_url,likes.summary(true),comments.summary(true)",
-            "limit": 100,
-        },
+        params={"access_token": token, "fields": _fb_fields_with_insights, "limit": 100},
     )
+    if err and not posts_data:
+        # Retry without insights (token may lack page insights permission)
+        posts_data, err = _paginate_graph_api(
+            f"{GRAPH_API_BASE}/{page.page_id}/posts",
+            params={"access_token": token, "fields": _fb_fields_without_insights, "limit": 100},
+        )
     if err and not posts_data:
         yield {"type": "error", "error": f"Failed to fetch posts: {err}"}
         return
@@ -318,11 +383,44 @@ def sync_facebook_stream(page):
     total_posts = len(posts_data)
     yield {"type": "start", "total": total_posts}
 
+    # ── Pre-fetch comments for all posts that need them (parallel) ──
+    def _fb_needs_comments(p_data):
+        pid = p_data.get("id", "")
+        ac = (p_data.get("comments") or {}).get("summary", {}).get("total_count", 0)
+        ex = existing_posts.get(pid)
+        if ex:
+            return ex.comments_count != ac and ac > 0
+        return ac > 0
+
+    posts_needing_comments = [p for p in posts_data if _fb_needs_comments(p)]
+    prefetched_fb_comments = {}
+    if posts_needing_comments:
+        def _fetch_fb_comments(pid):
+            data, _ = _paginate_graph_api(
+                f"{GRAPH_API_BASE}/{pid}/comments",
+                params={"access_token": token, "fields": "id,from,message,created_time,like_count",
+                        "filter": "stream", "limit": 100},
+            )
+            return pid, data
+        with ThreadPoolExecutor(max_workers=min(8, len(posts_needing_comments))) as executor:
+            futures = {executor.submit(_fetch_fb_comments, p.get("id", "")): p for p in posts_needing_comments}
+            for future in as_completed(futures):
+                try:
+                    pid, cdata = future.result()
+                    prefetched_fb_comments[pid] = cdata
+                except Exception:
+                    pass
+
     for idx, p in enumerate(posts_data):
         platform_post_id = p.get("id", "")
         api_likes = (p.get("likes") or {}).get("summary", {}).get("total_count", 0)
         api_comments = (p.get("comments") or {}).get("summary", {}).get("total_count", 0)
         api_shares = (p.get("shares") or {}).get("count", 0)
+        api_views = 0
+        for insight in (p.get("insights") or {}).get("data", []):
+            if insight.get("name") == "post_impressions":
+                api_views = (insight.get("values") or [{}])[0].get("value", 0)
+                break
         caption = (p.get("message") or "")[:60] or "(No message)"
         thumbnail = p.get("full_picture")
         permalink = p.get("permalink_url")
@@ -336,6 +434,7 @@ def sync_facebook_stream(page):
                 post.likes_count != api_likes
                 or post.comments_count != api_comments
                 or post.shares_count != api_shares
+                or post.views != api_views
             )
             if not counts_changed:
                 db_comment_count = Comment.query.filter_by(post_id=post.id).count()
@@ -355,6 +454,7 @@ def sync_facebook_stream(page):
             post.likes_count = api_likes
             post.comments_count = api_comments
             post.shares_count = api_shares
+            post.views = api_views
             post.synced_at = datetime.now(timezone.utc)
         else:
             likes_changed = api_likes > 0
@@ -371,6 +471,7 @@ def sync_facebook_stream(page):
                 likes_count=api_likes,
                 comments_count=api_comments,
                 shares_count=api_shares,
+                views=api_views,
                 posted_at=_parse_fb_time(p.get("created_time")),
                 synced_at=datetime.now(timezone.utc),
             )
@@ -378,9 +479,6 @@ def sync_facebook_stream(page):
 
         db.session.flush()
         stats["posts_synced"] += 1
-
-        if likes_changed and api_likes > 0:
-            _sync_facebook_reactions(post, page, token)
 
         if not comments_changed or api_comments == 0:
             yield {"type": "post", "index": idx + 1, "total": total_posts,
@@ -395,15 +493,8 @@ def sync_facebook_stream(page):
             .all()
         )
 
-        post_comments_data, _ = _paginate_graph_api(
-            f"{GRAPH_API_BASE}/{platform_post_id}/comments",
-            params={
-                "access_token": token,
-                "fields": "id,from,message,created_time,like_count",
-                "filter": "stream",
-                "limit": 100,
-            },
-        )
+        # Use pre-fetched comments (already downloaded in parallel)
+        post_comments_data = prefetched_fb_comments.get(platform_post_id) or []
 
         pending_contacts = []
         for c in post_comments_data:
@@ -447,6 +538,7 @@ def sync_facebook_stream(page):
                "title": caption, "thumbnail": thumbnail, "permalink": permalink,
                "likes": api_likes, "comments_synced": post_comments_synced}
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     yield {"type": "done", **stats}
@@ -524,21 +616,59 @@ def _sync_instagram(page):
     }
 
     # Fetch all media (paginated, follows all pages)
+    # Try with insights first; fall back without if the token lacks insights permission
+    _ig_fields_with = "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count,insights.metric(impressions){values}"
+    _ig_fields_without = "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count"
     media_data, err = _paginate_graph_api(
         f"{api_base}/{page.page_id}/media",
-        params={
-            "access_token": token,
-            "fields": "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count",
-            "limit": 100,
-        },
+        params={"access_token": token, "fields": _ig_fields_with, "limit": 100},
     )
     if err and not media_data:
+        media_data, err = _paginate_graph_api(
+            f"{api_base}/{page.page_id}/media",
+            params={"access_token": token, "fields": _ig_fields_without, "limit": 100},
+        )
+    if err and not media_data:
         return {"error": f"Failed to fetch media: {err}"}
+
+    # ── Pre-fetch comments for posts that need them (parallel) ──
+    def _ig_reg_needs_comments(m_data):
+        pid = m_data.get("id", "")
+        ac = m_data.get("comments_count", 0)
+        ex = existing_posts.get(pid)
+        if ex:
+            return ex.comments_count != ac and ac > 0
+        return ac > 0
+
+    ig_reg_needing = [m for m in media_data if _ig_reg_needs_comments(m)]
+    prefetched_ig_reg = {}
+    if ig_reg_needing:
+        def _fetch_ig_reg_comments(pid):
+            data, _ = _paginate_graph_api(
+                f"{api_base}/{pid}/comments",
+                params={"access_token": token, "fields": "id,text,from,timestamp,like_count",
+                        "limit": 100},
+            )
+            return pid, data
+        with ThreadPoolExecutor(max_workers=min(8, len(ig_reg_needing))) as executor:
+            futures = {executor.submit(_fetch_ig_reg_comments, m.get("id", "")): m for m in ig_reg_needing}
+            for future in as_completed(futures):
+                try:
+                    pid, cdata = future.result()
+                    prefetched_ig_reg[pid] = cdata
+                except Exception:
+                    pass
 
     for m in media_data:
         platform_post_id = m.get("id", "")
         api_comments_count = m.get("comments_count", 0)
         api_likes = m.get("like_count", 0)
+        # Parse views from insights (impressions)
+        api_views = 0
+        for insight in (m.get("insights") or {}).get("data", []):
+            if insight.get("name") == "impressions":
+                api_views = (insight.get("values") or [{}])[0].get("value", 0)
+                break
 
         existing = existing_posts.get(platform_post_id)
 
@@ -548,6 +678,7 @@ def _sync_instagram(page):
             counts_changed = (
                 post.likes_count != api_likes
                 or post.comments_count != api_comments_count
+                or post.views != api_views
             )
             if not counts_changed:
                 db_comment_count = Comment.query.filter_by(post_id=post.id).count()
@@ -563,6 +694,7 @@ def _sync_instagram(page):
             post.permalink = m.get("permalink") or post.permalink
             post.likes_count = api_likes
             post.comments_count = api_comments_count
+            post.views = api_views
             post.synced_at = datetime.now(timezone.utc)
         else:
             comments_changed = api_comments_count > 0
@@ -578,6 +710,7 @@ def _sync_instagram(page):
                 permalink=m.get("permalink"),
                 likes_count=api_likes,
                 comments_count=api_comments_count,
+                views=api_views,
                 posted_at=_parse_fb_time(m.get("timestamp")),
                 synced_at=datetime.now(timezone.utc),
             )
@@ -598,15 +731,8 @@ def _sync_instagram(page):
             .all()
         )
 
-        # Fetch all comments for this post
-        comments_data, _ = _paginate_graph_api(
-            f"{api_base}/{platform_post_id}/comments",
-            params={
-                "access_token": token,
-                "fields": "id,text,from,timestamp,like_count",
-                "limit": 100,
-            },
-        )
+        # Use pre-fetched comments (already fetched in parallel above)
+        comments_data = prefetched_ig_reg.get(platform_post_id, [])
 
         pending_contacts = []
         for c in comments_data:
@@ -650,6 +776,7 @@ def _sync_instagram(page):
                 _extract_contact(comment, page.company_id, post.id)
                 stats["contacts_found"] += 1
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     return stats
@@ -673,14 +800,17 @@ def sync_instagram_stream(page):
         for p in Post.query.filter_by(connected_page_id=page.id).all()
     }
 
+    _ig_fields_with = "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count,insights.metric(impressions){values}"
+    _ig_fields_without = "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count"
     media_data, err = _paginate_graph_api(
         f"{api_base}/{page.page_id}/media",
-        params={
-            "access_token": token,
-            "fields": "id,caption,media_type,media_url,thumbnail_url,timestamp,permalink,like_count,comments_count",
-            "limit": 100,
-        },
+        params={"access_token": token, "fields": _ig_fields_with, "limit": 100},
     )
+    if err and not media_data:
+        media_data, err = _paginate_graph_api(
+            f"{api_base}/{page.page_id}/media",
+            params={"access_token": token, "fields": _ig_fields_without, "limit": 100},
+        )
     if err and not media_data:
         yield {"type": "error", "error": f"Failed to fetch media: {err}"}
         return
@@ -688,10 +818,42 @@ def sync_instagram_stream(page):
     total_posts = len(media_data)
     yield {"type": "start", "total": total_posts}
 
+    # ── Pre-fetch comments for all posts that need them (parallel) ──
+    def _ig_needs_comments(m_data):
+        pid = m_data.get("id", "")
+        ac = m_data.get("comments_count", 0)
+        ex = existing_posts.get(pid)
+        if ex:
+            return ex.comments_count != ac and ac > 0
+        return ac > 0
+
+    ig_posts_needing_comments = [m for m in media_data if _ig_needs_comments(m)]
+    prefetched_ig_comments = {}
+    if ig_posts_needing_comments:
+        def _fetch_ig_comments(pid):
+            data, _ = _paginate_graph_api(
+                f"{api_base}/{pid}/comments",
+                params={"access_token": token, "fields": "id,text,from,timestamp,like_count", "limit": 100},
+            )
+            return pid, data
+        with ThreadPoolExecutor(max_workers=min(8, len(ig_posts_needing_comments))) as executor:
+            futures = {executor.submit(_fetch_ig_comments, m.get("id", "")): m for m in ig_posts_needing_comments}
+            for future in as_completed(futures):
+                try:
+                    pid, cdata = future.result()
+                    prefetched_ig_comments[pid] = cdata
+                except Exception:
+                    pass
+
     for idx, m in enumerate(media_data):
         platform_post_id = m.get("id", "")
         api_comments_count = m.get("comments_count", 0)
         api_likes = m.get("like_count", 0)
+        api_views = 0
+        for insight in (m.get("insights") or {}).get("data", []):
+            if insight.get("name") == "impressions":
+                api_views = (insight.get("values") or [{}])[0].get("value", 0)
+                break
         caption = (m.get("caption") or "")[:60] or "(No caption)"
         thumbnail = m.get("thumbnail_url") or m.get("media_url")
         permalink = m.get("permalink")
@@ -704,6 +866,7 @@ def sync_instagram_stream(page):
             counts_changed = (
                 post.likes_count != api_likes
                 or post.comments_count != api_comments_count
+                or post.views != api_views
             )
             if not counts_changed:
                 db_comment_count = Comment.query.filter_by(post_id=post.id).count()
@@ -721,6 +884,7 @@ def sync_instagram_stream(page):
             post.permalink = m.get("permalink") or post.permalink
             post.likes_count = api_likes
             post.comments_count = api_comments_count
+            post.views = api_views
             post.synced_at = datetime.now(timezone.utc)
         else:
             comments_changed = api_comments_count > 0
@@ -736,6 +900,7 @@ def sync_instagram_stream(page):
                 permalink=m.get("permalink"),
                 likes_count=api_likes,
                 comments_count=api_comments_count,
+                views=api_views,
                 posted_at=_parse_fb_time(m.get("timestamp")),
                 synced_at=datetime.now(timezone.utc),
             )
@@ -757,14 +922,8 @@ def sync_instagram_stream(page):
             .all()
         )
 
-        post_comments_data, _ = _paginate_graph_api(
-            f"{api_base}/{platform_post_id}/comments",
-            params={
-                "access_token": token,
-                "fields": "id,text,from,timestamp,like_count",
-                "limit": 100,
-            },
-        )
+        # Use pre-fetched comments (already downloaded in parallel)
+        post_comments_data = prefetched_ig_comments.get(platform_post_id) or []
 
         pending_contacts = []
         for c in post_comments_data:
@@ -810,6 +969,7 @@ def sync_instagram_stream(page):
                "title": caption, "thumbnail": thumbnail, "permalink": permalink,
                "likes": api_likes, "comments_synced": post_comments_synced}
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     yield {"type": "done", **stats}
@@ -828,27 +988,12 @@ def _sync_youtube_core(page, service, video_objects=None):
     channel_id = page.page_id
     stats = {"posts_synced": 0, "comments_synced": 0, "contacts_found": 0}
 
-    # Use provided video objects or fetch all from channel
-    if video_objects is not None:
-        videos = video_objects
-    else:
-        videos = service.fetch_all_channel_videos(channel_id)
-    if not videos:
-        yield {"type": "error", "error": "No videos found or API request failed. Check your API key and channel ID."}
-        return
-
-    total_videos = len(videos)
-    yield {"type": "start", "total": total_videos}
-
-    # Pre-load existing posts for this page (avoids per-video DB query)
+    # Pre-load existing posts for this page
     existing_posts = {
         p.platform_post_id: p
         for p in Post.query.filter_by(connected_page_id=page.id).all()
     }
 
-    # ── Batch-fetch ALL video statistics up-front (50 IDs per request) ──
-    # This replaces N individual stats API calls with ceil(N/50) calls —
-    # for 74 videos: 74 calls → 2 calls.
     def _extract_video_id(v):
         if isinstance(v.get("id"), dict):
             return v["id"].get("videoId")
@@ -856,35 +1001,147 @@ def _sync_youtube_core(page, service, video_objects=None):
             return v["snippet"]["resourceId"].get("videoId")
         return v.get("id")
 
-    all_video_ids = [_extract_video_id(v) for v in videos]
-    all_video_ids = [vid for vid in all_video_ids if vid]
+    # Use provided video objects or fetch from channel
+    if video_objects is not None:
+        videos = video_objects
+        yt_fetch_err = None
+    elif existing_posts:
+        # Re-sync: only fetch NEW videos (stop at first known video)
+        yield {"type": "phase", "message": "Checking for new videos..."}
+        videos, yt_fetch_err = service.fetch_all_channel_videos(
+            channel_id, known_video_ids=set(existing_posts.keys())
+        )
+        # Even if no new videos, we still check stats for existing ones
+        if yt_fetch_err and not videos and not existing_posts:
+            yield {"type": "error", "error": f"YouTube API error: {yt_fetch_err}"}
+            return
+    else:
+        # First sync: fetch ALL videos
+        yield {"type": "phase", "message": "Fetching video list from channel..."}
+        videos, yt_fetch_err = service.fetch_all_channel_videos(channel_id)
+        if not videos:
+            msg = "No videos found or API request failed."
+            if yt_fetch_err:
+                msg = f"YouTube API error: {yt_fetch_err}"
+            yield {"type": "error", "error": msg}
+            return
+
+    # Build full video ID list: new videos from API + existing from DB
+    new_video_ids = [_extract_video_id(v) for v in videos]
+    new_video_ids = [vid for vid in new_video_ids if vid]
+    all_video_ids = list(dict.fromkeys(new_video_ids + list(existing_posts.keys())))
+
+    total_videos = len(all_video_ids)
+    if total_videos == 0:
+        yield {"type": "error", "error": "No videos found."}
+        return
+    yield {"type": "start", "total": total_videos}
+
+    # Map new video snippets by ID for quick lookup
+    new_video_snippets = {}
+    for v in videos:
+        vid = _extract_video_id(v)
+        if vid:
+            new_video_snippets[vid] = v.get("snippet", {})
 
     all_video_stats = {}
     _BATCH = 50
-    for _i in range(0, len(all_video_ids), _BATCH):
-        _batch_ids = all_video_ids[_i:_i + _BATCH]
+    _stat_batches = [all_video_ids[i:i + _BATCH] for i in range(0, len(all_video_ids), _BATCH)]
+
+    def _fetch_stats_batch(batch_ids):
+        result = {}
         try:
-            _sr = http_requests.get(
+            _sr = _http_session.get(
                 "https://www.googleapis.com/youtube/v3/videos",
                 params={
                     "key": service.credentials.api_key,
-                    "id": ",".join(_batch_ids),
+                    "id": ",".join(batch_ids),
                     "part": "statistics",
                 },
                 timeout=30,
             )
             for _item in _sr.json().get("items", []):
-                all_video_stats[_item["id"]] = _item.get("statistics", {})
+                result[_item["id"]] = _item.get("statistics", {})
         except Exception:
             pass
+        return result
 
-    for idx, v in enumerate(videos):
-        video_id = _extract_video_id(v)
+    if len(_stat_batches) > 1:
+        with ThreadPoolExecutor(max_workers=len(_stat_batches)) as executor:
+            for batch_result in executor.map(_fetch_stats_batch, _stat_batches):
+                all_video_stats.update(batch_result)
+    elif _stat_batches:
+        all_video_stats.update(_fetch_stats_batch(_stat_batches[0]))
+
+    # ── Determine which videos need comment fetching ──
+    videos_needing_comments = set()
+    for v in videos:
+        vid = _extract_video_id(v)
+        if not vid:
+            continue
+        vs = all_video_stats.get(vid, {})
+        existing = existing_posts.get(vid)
+        if existing:
+            cc_api = int(vs.get("commentCount", 0))
+            if existing.comments_count != cc_api and cc_api > 0:
+                videos_needing_comments.add(vid)
+        elif int(vs.get("commentCount", 0)) > 0:
+            videos_needing_comments.add(vid)
+
+    # ── Launch comment pre-fetch in background (non-blocking) ──
+    # Comments are fetched in parallel threads while we start processing
+    # videos immediately.  Each video grabs its comments from the dict
+    # when ready, or waits on its individual future.
+    if videos_needing_comments:
+        yield {"type": "phase", "message": f"Loading comments for {len(videos_needing_comments)} videos..."}
+    comment_futures = {}
+    _comment_executor = ThreadPoolExecutor(max_workers=min(16, max(len(videos_needing_comments), 1)))
+    for vid in videos_needing_comments:
+        comment_futures[vid] = _comment_executor.submit(
+            lambda v=vid: service.fetch_comments(v, include_replies=True)
+        )
+
+    def _get_comments_for(vid):
+        """Get comments for a video — from background pool or direct fetch."""
+        fut = comment_futures.get(vid)
+        if fut:
+            try:
+                return fut.result(timeout=120)
+            except Exception:
+                return []
+        return service.fetch_comments(vid, include_replies=True)
+
+    def _get_extra_replies_parallel(comments_list):
+        """Fetch extra replies for threads that exceed inline limit, in parallel."""
+        threads_need = []
+        for item in comments_list:
+            top = item.get("snippet", {}).get("topLevelComment", {})
+            tid = top.get("id", "")
+            total_r = (item.get("snippet") or {}).get("totalReplyCount", 0)
+            inline_r = (item.get("replies") or {}).get("comments", [])
+            if tid and total_r > len(inline_r):
+                threads_need.append(tid)
+        if not threads_need:
+            return {}
+        reply_map = {}
+        with ThreadPoolExecutor(max_workers=min(16, len(threads_need))) as rexec:
+            futs = {rexec.submit(service.fetch_comment_replies, tid): tid for tid in threads_need}
+            for fut in as_completed(futs):
+                tid = futs[fut]
+                try:
+                    reply_map[tid] = fut.result()
+                except Exception:
+                    pass
+        return reply_map
+
+    # ── Main loop — starts immediately, no blocking wait ──
+    for idx, video_id in enumerate(all_video_ids):
         if not video_id:
             continue
 
-        snippet = v.get("snippet", {})
-        platform_post_id = video_id
+        # Get snippet: from new API data, or from existing DB post
+        snippet = new_video_snippets.get(video_id, {})
+        existing = existing_posts.get(video_id)
 
         # Use pre-fetched stats (no extra API call per video)
         video_stats = all_video_stats.get(video_id, {})
@@ -895,9 +1152,11 @@ def _sync_youtube_core(page, service, video_objects=None):
         views_count = int(video_stats.get("viewCount", 0))
         permalink = f"https://www.youtube.com/watch?v={video_id}"
         thumbnail = (snippet.get("thumbnails") or {}).get("high", {}).get("url") or \
-                     (snippet.get("thumbnails") or {}).get("default", {}).get("url")
+                     (snippet.get("thumbnails") or {}).get("default", {}).get("url") or \
+                     (existing.thumbnail_url if existing else None)
 
-        existing = existing_posts.get(platform_post_id)
+        # Title: prefer API snippet, fall back to existing DB caption
+        title = snippet.get("title") or (existing.caption if existing else "") or "Untitled"
 
         if existing:
             post = existing
@@ -915,7 +1174,7 @@ def _sync_youtube_core(page, service, video_objects=None):
                     "index": idx + 1,
                     "total": total_videos,
                     "video_id": video_id,
-                    "title": snippet.get("title", "Untitled"),
+                    "title": title,
                     "thumbnail": thumbnail,
                     "permalink": permalink,
                     "views": views_count,
@@ -928,7 +1187,7 @@ def _sync_youtube_core(page, service, video_objects=None):
 
             comments_changed = post.comments_count != comments_count_api
 
-            post.caption = snippet.get("title") or post.caption
+            post.caption = title
             post.media_url = thumbnail or post.media_url
             post.permalink = permalink
             post.likes_count = likes_count
@@ -942,8 +1201,8 @@ def _sync_youtube_core(page, service, video_objects=None):
                 company_id=page.company_id,
                 connected_page_id=page.id,
                 platform="youtube",
-                platform_post_id=platform_post_id,
-                caption=snippet.get("title", ""),
+                platform_post_id=video_id,
+                caption=title,
                 media_url=thumbnail,
                 media_type="video",
                 thumbnail_url=thumbnail,
@@ -952,7 +1211,7 @@ def _sync_youtube_core(page, service, video_objects=None):
                 comments_count=comments_count_api,
                 shares_count=shares_count,
                 views=views_count,
-                posted_at=_parse_yt_time(snippet.get("publishedAt")),
+                posted_at=_parse_yt_time(snippet.get("publishedAt")) if snippet else None,
                 synced_at=datetime.now(timezone.utc),
             )
             db.session.add(post)
@@ -972,7 +1231,10 @@ def _sync_youtube_core(page, service, video_objects=None):
             )
 
             pending_contacts = []
-            comments_list = service.fetch_comments(video_id, include_replies=True)
+            # Get comments (from background pool — may already be ready)
+            comments_list = _get_comments_for(video_id)
+            # Fetch extra replies for this video's threads in parallel
+            extra_replies_map = _get_extra_replies_parallel(comments_list)
 
             def _save_yt_comment(c_id, c_snippet, is_reply=False):
                 """Helper: build and add a Comment row; return it or None if skipped."""
@@ -1031,9 +1293,9 @@ def _sync_youtube_core(page, service, video_objects=None):
                         if saved_r.has_contact_info:
                             pending_contacts.append(saved_r)
 
-                # ── Fetch remaining replies when thread has more than inline ──
+                # ── Extra replies from parallel pre-fetch ──
                 if thread_id and total_replies > len(inline_replies):
-                    extra_replies = service.fetch_comment_replies(thread_id)
+                    extra_replies = extra_replies_map.get(thread_id, [])
                     for reply in extra_replies:
                         r_id = reply.get("id", "")
                         r_snippet = (reply.get("snippet") or {})
@@ -1051,8 +1313,9 @@ def _sync_youtube_core(page, service, video_objects=None):
                     _extract_contact(comment, page.company_id, post.id)
                     stats["contacts_found"] += 1
 
-        # Commit after every video to keep memory low and persist incremental progress
-        _safe_commit()
+        # Batch commit every 10 videos for speed (instead of per-video)
+        if (idx + 1) % 10 == 0:
+            _safe_commit()
 
         # Yield progress for this video
         yield {
@@ -1060,7 +1323,7 @@ def _sync_youtube_core(page, service, video_objects=None):
             "index": idx + 1,
             "total": total_videos,
             "video_id": video_id,
-            "title": snippet.get("title", "Untitled"),
+            "title": title,
             "thumbnail": thumbnail,
             "permalink": permalink,
             "views": views_count,
@@ -1069,6 +1332,9 @@ def _sync_youtube_core(page, service, video_objects=None):
             "comments_total": comments_count_api,
         }
 
+    _comment_executor.shutdown(wait=False)
+
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
 
@@ -1148,7 +1414,7 @@ def _sync_linkedin(page):
 
     # Fetch organization posts (ugcPosts API)
     try:
-        resp = http_requests.get(
+        resp = _http_session.get(
             f"{LI_BASE}/ugcPosts",
             headers=headers,
             params={
@@ -1178,6 +1444,51 @@ def _sync_linkedin(page):
 
     elements = data.get("elements", [])
 
+    # ── Pre-fetch stats AND comments for all posts in parallel ──
+    prefetched_li_reg_stats = {}   # urn -> {likes, comments_count}
+    prefetched_li_reg_comments = {}  # urn -> [comment_elements]
+
+    def _fetch_li_reg_stats_and_comments(urn):
+        li_stats = {"likes": 0, "comments_count": 0}
+        li_comments = []
+        try:
+            stats_resp = _http_session.get(
+                f"{LI_BASE}/socialActions/{urn}",
+                headers=headers,
+                timeout=10,
+            )
+            social = stats_resp.json()
+            li_stats["likes"] = (social.get("likesSummary") or {}).get("totalLikes", 0)
+            li_stats["comments_count"] = (social.get("commentsSummary") or {}).get(
+                "totalFirstLevelComments", 0
+            )
+        except Exception:
+            pass
+        try:
+            c_resp = _http_session.get(
+                f"{LI_BASE}/socialActions/{urn}/comments",
+                headers=headers,
+                params={"count": 100},
+                timeout=15,
+            )
+            if c_resp.status_code not in (403, 401):
+                li_comments = c_resp.json().get("elements", [])
+        except Exception:
+            pass
+        return urn, li_stats, li_comments
+
+    urns_to_fetch = [p.get("id", "") for p in elements if p.get("id")]
+    if urns_to_fetch:
+        with ThreadPoolExecutor(max_workers=min(8, len(urns_to_fetch))) as executor:
+            futures = {executor.submit(_fetch_li_reg_stats_and_comments, urn): urn for urn in urns_to_fetch}
+            for future in as_completed(futures):
+                try:
+                    urn, s_data, c_data = future.result()
+                    prefetched_li_reg_stats[urn] = s_data
+                    prefetched_li_reg_comments[urn] = c_data
+                except Exception:
+                    pass
+
     for p in elements:
         post_urn = p.get("id", "")
         if not post_urn:
@@ -1196,22 +1507,10 @@ def _sync_linkedin(page):
             if created_ms else None
         )
 
-        # Fetch engagement stats
-        likes_count = 0
-        comments_count_api = 0
-        try:
-            stats_resp = http_requests.get(
-                f"{LI_BASE}/socialActions/{post_urn}",
-                headers=headers,
-                timeout=10,
-            )
-            social = stats_resp.json()
-            likes_count = (social.get("likesSummary") or {}).get("totalLikes", 0)
-            comments_count_api = (social.get("commentsSummary") or {}).get(
-                "totalFirstLevelComments", 0
-            )
-        except Exception:
-            pass
+        # Use pre-fetched engagement stats
+        li_pre = prefetched_li_reg_stats.get(post_urn, {})
+        likes_count = li_pre.get("likes", 0)
+        comments_count_api = li_pre.get("comments_count", 0)
 
         existing = existing_posts.get(post_urn)
 
@@ -1256,19 +1555,8 @@ def _sync_linkedin(page):
         if not comments_changed or comments_count_api == 0:
             continue
 
-        # Fetch comments for this post
-        comments_data = []
-        try:
-            c_resp = http_requests.get(
-                f"{LI_BASE}/socialActions/{post_urn}/comments",
-                headers=headers,
-                params={"count": 100},
-                timeout=15,
-            )
-            if c_resp.status_code not in (403, 401):
-                comments_data = c_resp.json().get("elements", [])
-        except Exception:
-            pass
+        # Use pre-fetched comments
+        comments_data = prefetched_li_reg_comments.get(post_urn, [])
 
         existing_comment_ids = set(
             c.platform_comment_id
@@ -1320,6 +1608,7 @@ def _sync_linkedin(page):
                 _extract_contact(comment, page.company_id, post.id)
                 stats["contacts_found"] += 1
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     return stats
@@ -1353,7 +1642,7 @@ def sync_linkedin_stream(page):
     }
 
     try:
-        resp = http_requests.get(
+        resp = _http_session.get(
             f"{LI_BASE}/ugcPosts",
             headers=headers,
             params={"q": "authors", "authors": f"List(urn:li:organization:{org_id})",
@@ -1380,6 +1669,45 @@ def sync_linkedin_stream(page):
     total_posts = len(elements)
     yield {"type": "start", "total": total_posts}
 
+    # ── Pre-fetch ALL post stats + comments in parallel ──
+    # LinkedIn requires a per-post API call for stats AND comments — parallelize both
+    post_urns = [p.get("id", "") for p in elements if p.get("id")]
+    prefetched_li_stats = {}
+    prefetched_li_comments = {}
+
+    def _fetch_li_stats_and_comments(urn):
+        s = {"likes": 0, "comments": 0}
+        comments = []
+        try:
+            sr = _http_session.get(f"{LI_BASE}/socialActions/{urn}", headers=headers, timeout=15)
+            social = sr.json()
+            s["likes"] = (social.get("likesSummary") or {}).get("totalLikes", 0)
+            s["comments"] = (social.get("commentsSummary") or {}).get("totalFirstLevelComments", 0)
+        except Exception:
+            pass
+        if s["comments"] > 0:
+            try:
+                cr = _http_session.get(
+                    f"{LI_BASE}/socialActions/{urn}/comments",
+                    headers=headers, params={"count": 100}, timeout=15,
+                )
+                if cr.status_code not in (403, 401):
+                    comments = cr.json().get("elements", [])
+            except Exception:
+                pass
+        return urn, s, comments
+
+    if post_urns:
+        with ThreadPoolExecutor(max_workers=min(8, len(post_urns))) as executor:
+            futures = {executor.submit(_fetch_li_stats_and_comments, urn): urn for urn in post_urns}
+            for future in as_completed(futures):
+                try:
+                    urn, s, comments = future.result()
+                    prefetched_li_stats[urn] = s
+                    prefetched_li_comments[urn] = comments
+                except Exception:
+                    pass
+
     for idx, p in enumerate(elements):
         post_urn = p.get("id", "")
         if not post_urn:
@@ -1395,15 +1723,10 @@ def sync_linkedin_stream(page):
         created_ms = (p.get("created") or {}).get("time", 0)
         posted_at = datetime.fromtimestamp(created_ms / 1000, tz=timezone.utc) if created_ms else None
 
-        likes_count = 0
-        comments_count_api = 0
-        try:
-            stats_resp = http_requests.get(f"{LI_BASE}/socialActions/{post_urn}", headers=headers, timeout=10)
-            social = stats_resp.json()
-            likes_count = (social.get("likesSummary") or {}).get("totalLikes", 0)
-            comments_count_api = (social.get("commentsSummary") or {}).get("totalFirstLevelComments", 0)
-        except Exception:
-            pass
+        # Use pre-fetched stats (already downloaded in parallel)
+        li_stats = prefetched_li_stats.get(post_urn, {"likes": 0, "comments": 0})
+        likes_count = li_stats["likes"]
+        comments_count_api = li_stats["comments"]
 
         post_comments_synced = 0
         existing = existing_posts.get(post_urn)
@@ -1451,16 +1774,8 @@ def sync_linkedin_stream(page):
                    "likes": likes_count, "comments_synced": 0}
             continue
 
-        comments_data_li = []
-        try:
-            c_resp = http_requests.get(
-                f"{LI_BASE}/socialActions/{post_urn}/comments",
-                headers=headers, params={"count": 100}, timeout=15,
-            )
-            if c_resp.status_code not in (403, 401):
-                comments_data_li = c_resp.json().get("elements", [])
-        except Exception:
-            pass
+        # Use pre-fetched comments (already downloaded in parallel)
+        comments_data_li = prefetched_li_comments.get(post_urn, [])
 
         existing_comment_ids = set(
             c.platform_comment_id
@@ -1510,6 +1825,7 @@ def sync_linkedin_stream(page):
                "title": caption, "thumbnail": media_url, "permalink": None,
                "likes": likes_count, "comments_synced": post_comments_synced}
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     yield {"type": "done", **stats}
@@ -1553,7 +1869,7 @@ def _sync_twitter(page):
             }
             if next_token:
                 params["pagination_token"] = next_token
-            resp = http_requests.get(
+            resp = _http_session.get(
                 f"{TW_BASE}/users/{user_id}/tweets",
                 headers=headers,
                 params=params,
@@ -1577,6 +1893,61 @@ def _sync_twitter(page):
         next_token = (data.get("meta") or {}).get("next_token")
         if not next_token:
             break
+
+    # ── Pre-fetch replies for tweets that need them (parallel) ──
+    def _tw_reg_needs_replies(tw):
+        tid = tw.get("id", "")
+        rc = (tw.get("public_metrics") or {}).get("reply_count", 0)
+        if rc == 0:
+            return False
+        ex = existing_posts.get(tid)
+        if ex:
+            return ex.comments_count != rc
+        return True
+
+    tw_reg_needing = [t for t in all_tweets if t.get("id") and _tw_reg_needs_replies(t)]
+    prefetched_tw_reg = {}  # tweet_id -> {"replies": [...], "user_lookup": {...}}
+
+    if tw_reg_needing:
+        def _fetch_tw_reg_replies(tid, rc):
+            tw_replies = []
+            tw_users = {}
+            try:
+                r_resp = _http_session.get(
+                    f"{TW_BASE}/tweets/search/recent",
+                    headers=headers,
+                    params={
+                        "query": f"conversation_id:{tid} -from:{user_id}",
+                        "max_results": min(100, max(rc + 10, 10)),
+                        "tweet.fields": "created_at,author_id,text,public_metrics",
+                        "expansions": "author_id",
+                        "user.fields": "name,username",
+                    },
+                    timeout=15,
+                )
+                r_data = r_resp.json()
+                tw_replies = r_data.get("data", [])
+                for u in (r_data.get("includes") or {}).get("users", []):
+                    tw_users[u["id"]] = u.get("name") or u.get("username") or "Unknown"
+            except Exception:
+                pass
+            return tid, tw_replies, tw_users
+
+        with ThreadPoolExecutor(max_workers=min(8, len(tw_reg_needing))) as executor:
+            futures = {
+                executor.submit(
+                    _fetch_tw_reg_replies,
+                    t.get("id", ""),
+                    (t.get("public_metrics") or {}).get("reply_count", 0),
+                ): t
+                for t in tw_reg_needing
+            }
+            for future in as_completed(futures):
+                try:
+                    tid, r_list, u_map = future.result()
+                    prefetched_tw_reg[tid] = {"replies": r_list, "user_lookup": u_map}
+                except Exception:
+                    pass
 
     for t in all_tweets:
         tweet_id = t.get("id", "")
@@ -1650,28 +2021,10 @@ def _sync_twitter(page):
             .all()
         )
 
-        # Fetch replies via recent search (7-day window on free tier)
-        replies = []
-        user_lookup = {}
-        try:
-            r_resp = http_requests.get(
-                f"{TW_BASE}/tweets/search/recent",
-                headers=headers,
-                params={
-                    "query": f"conversation_id:{tweet_id} -from:{user_id}",
-                    "max_results": min(100, max(reply_count + 10, 10)),
-                    "tweet.fields": "created_at,author_id,text,public_metrics",
-                    "expansions": "author_id",
-                    "user.fields": "name,username",
-                },
-                timeout=15,
-            )
-            r_data = r_resp.json()
-            replies = r_data.get("data", [])
-            for u in (r_data.get("includes") or {}).get("users", []):
-                user_lookup[u["id"]] = u.get("name") or u.get("username") or "Unknown"
-        except Exception:
-            pass
+        # Use pre-fetched replies (already fetched in parallel above)
+        tw_pre = prefetched_tw_reg.get(tweet_id, {})
+        replies = tw_pre.get("replies", [])
+        user_lookup = tw_pre.get("user_lookup", {})
 
         pending_contacts = []
         for r in replies:
@@ -1721,6 +2074,7 @@ def _sync_twitter(page):
                 _extract_contact(comment, page.company_id, post.id)
                 stats["contacts_found"] += 1
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     return stats
@@ -1759,7 +2113,7 @@ def sync_twitter_stream(page):
             params = {"max_results": 100, "tweet.fields": "created_at,public_metrics,text,conversation_id"}
             if next_token:
                 params["pagination_token"] = next_token
-            resp = http_requests.get(
+            resp = _http_session.get(
                 f"{TW_BASE}/users/{user_id}/tweets",
                 headers=headers, params=params, timeout=30,
             )
@@ -1788,6 +2142,58 @@ def sync_twitter_stream(page):
 
     total_posts = len(all_tweets)
     yield {"type": "start", "total": total_posts}
+
+    # ── Pre-fetch replies for all tweets that have them (parallel) ──
+    def _tw_needs_replies(tweet):
+        tid = tweet.get("id", "")
+        rc = (tweet.get("public_metrics") or {}).get("reply_count", 0)
+        ex = existing_posts.get(tid)
+        if ex:
+            return ex.comments_count != rc and rc > 0
+        return rc > 0
+
+    tweets_needing_replies = [t for t in all_tweets if _tw_needs_replies(t)]
+    prefetched_tw_replies = {}
+
+    def _fetch_tw_replies(tid, rc):
+        replies = []
+        users = {}
+        try:
+            r_resp = _http_session.get(
+                f"{TW_BASE}/tweets/search/recent",
+                headers=headers,
+                params={
+                    "query": f"conversation_id:{tid} -from:{user_id}",
+                    "max_results": min(100, max(rc + 10, 10)),
+                    "tweet.fields": "created_at,author_id,text,public_metrics",
+                    "expansions": "author_id",
+                    "user.fields": "name,username",
+                },
+                timeout=15,
+            )
+            r_data = r_resp.json()
+            replies = r_data.get("data", [])
+            for u in (r_data.get("includes") or {}).get("users", []):
+                users[u["id"]] = u.get("name") or u.get("username") or "Unknown"
+        except Exception:
+            pass
+        return tid, replies, users
+
+    if tweets_needing_replies:
+        with ThreadPoolExecutor(max_workers=min(8, len(tweets_needing_replies))) as executor:
+            futures = {
+                executor.submit(
+                    _fetch_tw_replies,
+                    t.get("id", ""),
+                    (t.get("public_metrics") or {}).get("reply_count", 0),
+                ): t for t in tweets_needing_replies
+            }
+            for future in as_completed(futures):
+                try:
+                    tid, reps, users = future.result()
+                    prefetched_tw_replies[tid] = (reps, users)
+                except Exception:
+                    pass
 
     for idx, t in enumerate(all_tweets):
         tweet_id = t.get("id", "")
@@ -1867,27 +2273,8 @@ def sync_twitter_stream(page):
             .with_entities(Comment.platform_comment_id).all()
         )
 
-        replies = []
-        user_lookup = {}
-        try:
-            r_resp = http_requests.get(
-                f"{TW_BASE}/tweets/search/recent",
-                headers=headers,
-                params={
-                    "query": f"conversation_id:{tweet_id} -from:{user_id}",
-                    "max_results": min(100, max(reply_count + 10, 10)),
-                    "tweet.fields": "created_at,author_id,text,public_metrics",
-                    "expansions": "author_id",
-                    "user.fields": "name,username",
-                },
-                timeout=15,
-            )
-            r_data = r_resp.json()
-            replies = r_data.get("data", [])
-            for u in (r_data.get("includes") or {}).get("users", []):
-                user_lookup[u["id"]] = u.get("name") or u.get("username") or "Unknown"
-        except Exception:
-            pass
+        # Use pre-fetched replies (already downloaded in parallel)
+        replies, user_lookup = prefetched_tw_replies.get(tweet_id, ([], {}))
 
         pending_contacts = []
         for r in replies:
@@ -1937,6 +2324,7 @@ def sync_twitter_stream(page):
                "title": caption, "thumbnail": None, "permalink": permalink,
                "likes": likes_count, "comments_synced": post_comments_synced}
 
+    _mark_owner_replies_for_page(page)
     page.last_synced_at = datetime.now(timezone.utc)
     _safe_commit()
     yield {"type": "done", **stats}

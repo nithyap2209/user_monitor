@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}User Monitor — Social Media Monitoring Dashboard{% endblock %}
+
+{% block head %}
+<meta name="description" content="User Monitor helps businesses track, analyze, and respond to social media comments across YouTube, Facebook, Instagram, LinkedIn, and Twitter from one unified dashboard.">
+<meta property="og:title" content="User Monitor — Social Media Monitoring Dashboard">
+<meta property="og:description" content="Track, analyze, and respond to social media comments across all platforms from one dashboard.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.url }}">
+{% endblock %}
+
+{% block auth_content %}
+<div class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="text-xl font-bold text-gray-800">User Monitor</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{{ url_for('auth.login') }}"
+                   class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 transition">
+                    Log In
+                </a>
+                <a href="{{ url_for('auth.signup') }}"
+                   class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+            Monitor All Your Social Media<br>
+            <span class="text-indigo-600">Comments in One Place</span>
+        </h1>
+        <p class="mt-6 text-lg text-gray-600 max-w-2xl mx-auto">
+            Track, analyze sentiment, translate, and respond to comments across
+            YouTube, Facebook, Instagram, LinkedIn, and Twitter — all from a single dashboard.
+        </p>
+        <div class="mt-8 flex items-center justify-center gap-4">
+            <a href="{{ url_for('auth.signup') }}"
+               class="px-6 py-3 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">
+                <i class="fas fa-rocket mr-2"></i> Start Free
+            </a>
+            <a href="{{ url_for('auth.login') }}"
+               class="px-6 py-3 text-sm font-semibold text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition">
+                <i class="fas fa-sign-in-alt mr-2"></i> Log In
+            </a>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="max-w-6xl mx-auto px-6 py-16">
+        <h2 class="text-2xl font-bold text-gray-800 text-center mb-12">Everything You Need</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-comments text-red-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">Unified Comment Inbox</h3>
+                <p class="text-sm text-gray-500">
+                    View and respond to comments from YouTube, Facebook, Instagram, LinkedIn, and Twitter in one feed.
+                </p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-brain text-indigo-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">AI Sentiment Analysis</h3>
+                <p class="text-sm text-gray-500">
+                    Automatically detect positive, negative, and neutral comments using VADER, TextBlob, and keyword analysis.
+                </p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-language text-emerald-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">Multi-Language Translation</h3>
+                <p class="text-sm text-gray-500">
+                    Translate comments from any language including Tanglish, Hinglish, and regional languages to English.
+                </p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-reply text-amber-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">Direct Reply</h3>
+                <p class="text-sm text-gray-500">
+                    Reply to YouTube and Facebook comments directly from the dashboard without switching platforms.
+                </p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-chart-bar text-blue-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">Analytics Dashboard</h3>
+                <p class="text-sm text-gray-500">
+                    Visualize comment trends, sentiment distribution, platform breakdown, and engagement metrics.
+                </p>
+            </div>
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-users text-purple-500 text-xl"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 mb-2">Team Management</h3>
+                <p class="text-sm text-gray-500">
+                    Manage multiple companies, users, roles, and permissions with a flexible designation system.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Platforms -->
+    <section class="bg-white border-t border-b border-gray-100 py-16">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-8">Supported Platforms</h2>
+            <div class="flex items-center justify-center gap-8 md:gap-12 flex-wrap">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center">
+                        <i class="fab fa-youtube text-red-600 text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">YouTube</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center">
+                        <i class="fab fa-facebook-f text-blue-600 text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">Facebook</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center">
+                        <i class="fab fa-instagram text-pink-600 text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">Instagram</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-14 h-14 bg-sky-50 rounded-2xl flex items-center justify-center">
+                        <i class="fab fa-linkedin-in text-sky-700 text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">LinkedIn</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
+                        <i class="fab fa-x-twitter text-gray-800 text-2xl"></i>
+                    </div>
+                    <span class="text-xs font-medium text-gray-500">Twitter / X</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-50 border-t border-gray-100">
+        <div class="max-w-6xl mx-auto px-6 py-10">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white text-xs"></i>
+                    </div>
+                    <span class="font-semibold text-gray-700">User Monitor</span>
+                </div>
+                <div class="flex items-center gap-6 text-sm text-gray-500">
+                    <a href="{{ url_for('public.privacy') }}" class="hover:text-indigo-600 transition">Privacy Policy</a>
+                    <a href="{{ url_for('public.terms') }}" class="hover:text-indigo-600 transition">Terms & Conditions</a>
+                    <a href="{{ url_for('public.cookies') }}" class="hover:text-indigo-600 transition">Cookie Policy</a>
+                </div>
+            </div>
+            <div class="mt-6 text-center text-xs text-gray-400">
+                &copy; {{ now().year if now is defined else '2026' }} User Monitor. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</div>
+{% endblock %}

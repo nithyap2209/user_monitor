@@ -65,11 +65,11 @@
     border-radius: 50%;
     display: inline-block;
 }
-.sentiment-dot.positive { background-color: #10b981; }
-.sentiment-dot.negative { background-color: #f43f5e; }
-.sentiment-dot.neutral  { background-color: #6b7280; }
+.sentiment-dot.positive { background-color: #22c55e; }
+.sentiment-dot.negative { background-color: #ef4444; }
+.sentiment-dot.neutral  { background-color: #64748b; }
 .sentiment-dot.lead     { background-color: #3b82f6; }
-.sentiment-dot.business { background-color: #8b5cf6; }
+.sentiment-dot.business { background-color: #a855f7; }
 
 /* Button spinner overlay */
 .btn-loading {
@@ -84,9 +84,23 @@
     to   { transform: translateY(0); opacity: 1; }
 }
 
+/* Gradient card hover effect */
+.bg-white.rounded-xl {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.bg-white.rounded-xl:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a5b4fc; }
+
 /* Platform icon colors */
 .platform-facebook  { color: #1877F2; }
-.platform-instagram { color: #E4405F; }
+.platform-instagram { color: #C13584; }
 .platform-youtube   { color: #FF0000; }
 .platform-linkedin  { color: #0A66C2; }
 .platform-twitter   { color: #000000; }

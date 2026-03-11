@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Disallow: /auth/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /comments
+Disallow: /posts
+Disallow: /contacts
+Disallow: /inbox
+
+# Allow Facebook crawler for link previews and sharing debugger
+User-agent: facebookexternalhit
+Allow: /
+
+# Allow Facebook external hit v2
+User-agent: facebookexternalhit/1.1
+Allow: /
+
+# Allow LinkedIn bot
+User-agent: LinkedInBot
+Allow: /
+
+# Allow Twitter bot
+User-agent: Twitterbot
+Allow: /
+
+Sitemap: https://user-monitor-os12.onrender.com/sitemap.xml

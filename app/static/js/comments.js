@@ -28,7 +28,7 @@ async function sendInlineReply(commentId) {
     try {
         const data = await apiCall(`/api/comments/${commentId}/reply`, 'POST', { reply: text });
         if (data.success) {
-            showToast('Reply sent!', 'success');
+            showToast(data.message || 'Reply sent!', data.warning ? 'warning' : 'success');
             toggleReplyForm(commentId);
             // Mark as replied in badges row
             const card = document.getElementById(`comment-${commentId}`);
@@ -43,10 +43,10 @@ async function sendInlineReply(commentId) {
             }
         } else {
             showToast(data.error || 'Failed to reply.', 'danger');
-            if (sendBtn) setButtonLoading(sendBtn, false);
         }
     } catch (e) {
         showToast('Failed to send reply.', 'danger');
+    } finally {
         if (sendBtn) setButtonLoading(sendBtn, false);
     }
 }

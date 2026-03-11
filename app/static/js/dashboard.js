@@ -1,24 +1,33 @@
-// Dashboard Chart.js charts with cascading filters, improved visuals
+// Dashboard — User Monitor
+// Chart types: Polar Area (sentiment), Vertical Bar (platform), Bar (timeline), Radar (engagement),
+//              Doughnut (response), Pie (comment share), Horizontal Bar (views)
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── Color palettes ──────────────────────────────────────────
     const SENTIMENT_COLORS = {
-        positive: { bg: '#10b981', light: 'rgba(16, 185, 129, 0.15)' },
-        negative: { bg: '#f43f5e', light: 'rgba(244, 63, 94, 0.15)' },
-        neutral:  { bg: '#6b7280', light: 'rgba(107, 114, 128, 0.15)' },
-        lead:     { bg: '#3b82f6', light: 'rgba(59, 130, 246, 0.15)' },
-        business: { bg: '#8b5cf6', light: 'rgba(139, 92, 246, 0.15)' },
-        unknown:  { bg: '#d1d5db', light: 'rgba(209, 213, 219, 0.15)' },
+        positive: { bg: '#22c55e', light: 'rgba(34, 197, 94, 0.30)' },
+        negative: { bg: '#ef4444', light: 'rgba(239, 68, 68, 0.30)' },
+        neutral:  { bg: '#64748b', light: 'rgba(100, 116, 139, 0.25)' },
+        lead:     { bg: '#3b82f6', light: 'rgba(59, 130, 246, 0.30)' },
+        business: { bg: '#a855f7', light: 'rgba(168, 85, 247, 0.30)' },
+        unknown:  { bg: '#cbd5e1', light: 'rgba(203, 213, 225, 0.25)' },
     };
 
+    // Vibrant multi-color palette for timeline bars
+    const TIMELINE_BAR_COLORS = [
+        '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+        '#ec4899', '#f43f5e', '#f97316', '#eab308',
+        '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6',
+    ];
+
     const PLATFORM_COLORS = {
-        facebook:       { bg: '#1877F2', light: 'rgba(24, 119, 242, 0.12)' },
-        instagram:      { bg: '#E4405F', light: 'rgba(228, 64, 95, 0.12)' },
-        youtube:        { bg: '#FF0000', light: 'rgba(255, 0, 0, 0.12)' },
-        linkedin:       { bg: '#0A66C2', light: 'rgba(10, 102, 194, 0.12)' },
-        twitter:        { bg: '#000000', light: 'rgba(0, 0, 0, 0.08)' },
-        google_reviews: { bg: '#4285F4', light: 'rgba(66, 133, 244, 0.12)' },
+        facebook:       { bg: '#1877F2', light: 'rgba(24, 119, 242, 0.15)' },
+        instagram:      { bg: '#C13584', light: 'rgba(193, 53, 132, 0.15)' },
+        youtube:        { bg: '#FF0000', light: 'rgba(255, 0, 0, 0.15)' },
+        linkedin:       { bg: '#0A66C2', light: 'rgba(10, 102, 194, 0.15)' },
+        twitter:        { bg: '#000000', light: 'rgba(0, 0, 0, 0.10)' },
+        google_reviews: { bg: '#4285F4', light: 'rgba(66, 133, 244, 0.15)' },
     };
 
     const PLATFORM_LABELS = {
@@ -37,17 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let platformChart = null;
     let timelineChart = null;
     let engagementChart = null;
+    let responseChart = null;
+    let commentShareChart = null;
+    let viewsChart = null;
 
     // ── Global Chart.js defaults ────────────────────────────────
     Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
     Chart.defaults.font.size = 12;
     Chart.defaults.color = '#6b7280';
-    Chart.defaults.animation.duration = 800;
+    Chart.defaults.animation.duration = 700;
     Chart.defaults.animation.easing = 'easeOutQuart';
 
-    // Custom tooltip styling
     const tooltipConfig = {
-        backgroundColor: 'rgba(17, 24, 39, 0.9)',
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
         titleFont: { size: 13, weight: '600' },
         bodyFont: { size: 12 },
         padding: 12,
@@ -60,6 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const filterPlatform = document.getElementById('filterPlatform');
     const filterChannel = document.getElementById('filterChannel');
     const filterPost = document.getElementById('filterPost');
+    const filterDateFrom = document.getElementById('filterDateFrom');
+    const filterDateTo = document.getElementById('filterDateTo');
     const channelWrapper = document.getElementById('channelFilterWrapper');
     const postWrapper = document.getElementById('postFilterWrapper');
     const channelLabel = document.getElementById('channelFilterLabel');
@@ -78,9 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (isActive) {
                 if (p === '') {
-                    // "All" button active
-                    btn.style.backgroundColor = '#4f46e5';
-                    btn.style.borderColor = '#4f46e5';
+                    btn.style.backgroundColor = '#6366f1';
+                    btn.style.borderColor = '#6366f1';
                     btn.style.color = '#ffffff';
                 } else {
                     btn.style.backgroundColor = color;
@@ -88,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.style.color = '#ffffff';
                 }
                 btn.style.transform = 'scale(1.05)';
-                btn.style.boxShadow = `0 2px 8px ${color || '#4f46e5'}40`;
+                btn.style.boxShadow = `0 2px 8px ${color || '#6366f1'}40`;
             } else {
                 btn.style.backgroundColor = '#ffffff';
                 btn.style.borderColor = '#e5e7eb';
@@ -106,12 +118,11 @@ document.addEventListener('DOMContentLoaded', () => {
             filterPlatform.dispatchEvent(new Event('change'));
         });
 
-        // Hover effects
         btn.addEventListener('mouseenter', () => {
             if (btn.dataset.platform !== filterPlatform.value) {
                 const color = btn.dataset.color;
                 btn.style.borderColor = color || '#a5b4fc';
-                btn.style.backgroundColor = (color || '#4f46e5') + '12';
+                btn.style.backgroundColor = (color || '#6366f1') + '12';
             }
         });
         btn.addEventListener('mouseleave', () => {
@@ -122,10 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Sync icon buttons when clearFilters resets the select
     clearBtn.addEventListener('click', () => updatePlatformBtnStyles());
-
-    // Initial style
     updatePlatformBtnStyles();
 
     // ── Helpers ──────────────────────────────────────────────────
@@ -172,12 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
 
-    // ── Filter query string builder ─────────────────────────────
+    // ── Filter helpers ───────────────────────────────────────────
     function getFilterParams() {
         const params = new URLSearchParams();
         if (filterPlatform.value) params.set('platform', filterPlatform.value);
         if (filterChannel.value) params.set('page_id', filterChannel.value);
         if (filterPost.value) params.set('post_id', filterPost.value);
+        if (filterDateFrom.value) params.set('date_from', filterDateFrom.value);
+        if (filterDateTo.value) params.set('date_to', filterDateTo.value);
         return params.toString();
     }
 
@@ -191,11 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updateClearButton() {
-        const hasFilter = filterPlatform.value || filterChannel.value || filterPost.value;
+        const hasFilter = filterPlatform.value || filterChannel.value || filterPost.value || filterDateFrom.value || filterDateTo.value;
         clearBtn.style.display = hasFilter ? '' : 'none';
     }
 
-    // ── Platform changed → load channels ────────────────────────
+    // ── Filter event listeners ───────────────────────────────────
     filterPlatform.addEventListener('change', async () => {
         const platform = filterPlatform.value;
         filterChannel.innerHTML = '<option value="">All Channels</option>';
@@ -230,7 +240,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof loadKeywords === 'function') loadKeywords();
     });
 
-    // ── Channel changed → load posts ────────────────────────────
     filterChannel.addEventListener('change', async () => {
         const pageId = filterChannel.value;
         const platform = filterPlatform.value;
@@ -265,10 +274,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof loadKeywords === 'function') loadKeywords();
     });
 
+    filterDateFrom.addEventListener('change', () => {
+        updateClearButton();
+        loadDashboardData();
+        if (typeof loadKeywords === 'function') loadKeywords();
+    });
+
+    filterDateTo.addEventListener('change', () => {
+        updateClearButton();
+        loadDashboardData();
+        if (typeof loadKeywords === 'function') loadKeywords();
+    });
+
     clearBtn.addEventListener('click', () => {
         filterPlatform.value = '';
         filterChannel.innerHTML = '<option value="">All Channels</option>';
         filterPost.innerHTML = '<option value="">All Posts</option>';
+        filterDateFrom.value = '';
+        filterDateTo.value = '';
         channelWrapper.style.display = 'none';
         postWrapper.style.display = 'none';
         updateClearButton();
@@ -278,35 +301,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ═══════════════════════════════════════════════════════════════
-    //  LOAD DASHBOARD DATA
+    //  RENDER ALL CHARTS from a data object
+    // ═══════════════════════════════════════════════════════════════
+    function renderAllCharts(data) {
+        updateKPIs(data.kpi, data.engagement);
+        renderSentimentChart(data.sentiment);
+        renderPlatformChart(data.platforms);
+        renderTimelineChart(data.timeline);
+        renderEngagementChart(data.engagement);
+        renderResponseChart(data.kpi);
+        renderCommentShareChart(data.comment_platforms);
+        renderViewsChart(data.engagement);
+        renderTopPosts(data.top_posts);
+        renderRecentComments(data.recent_comments);
+        renderRecentContacts(data.recent_contacts);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  LOAD DASHBOARD DATA (API fetch — only used for filter changes)
     // ═══════════════════════════════════════════════════════════════
     async function loadDashboardData() {
-        // Show all skeletons
         showSkeleton('sentimentChartWrapper', 'sentimentSkeleton', 'sentimentEmpty');
         showSkeleton('platformChartWrapper', 'platformSkeleton', 'platformEmpty');
         showSkeleton('timelineChartWrapper', 'timelineSkeleton', 'timelineEmpty');
         showSkeleton('engagementChartWrapper', 'engagementSkeleton', 'engagementEmpty');
+        showSkeleton('responseChartWrapper', 'responseSkeleton', 'responseEmpty');
+        showSkeleton('commentShareChartWrapper', 'commentShareSkeleton', 'commentShareEmpty');
+        showSkeleton('viewsChartWrapper', 'viewsSkeleton', 'viewsEmpty');
 
         try {
             const qs = getFilterParams();
             const res = await fetch(`/api/dashboard/stats${qs ? '?' + qs : ''}`);
             const data = await res.json();
-
-            updateKPIs(data.kpi, data.engagement);
-            renderSentimentChart(data.sentiment);
-            renderPlatformChart(data.platforms);
-            renderTimelineChart(data.timeline);
-            renderEngagementChart(data.engagement);
-            renderTopPosts(data.top_posts);
-            renderRecentComments(data.recent_comments);
-            renderRecentContacts(data.recent_contacts);
+            renderAllCharts(data);
         } catch (e) {
             console.error('Failed to load dashboard stats:', e);
         }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  KPI CARDS (with animated counting)
+    //  KPI CARDS (animated counting)
     // ═══════════════════════════════════════════════════════════════
     function animateValue(el, target) {
         const start = parseInt(el.textContent.replace(/,/g, '')) || 0;
@@ -317,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         function update(now) {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            const eased = 1 - Math.pow(1 - progress, 3);
             const current = Math.round(start + (target - start) * eased);
             el.textContent = current.toLocaleString();
             if (progress < 1) requestAnimationFrame(update);
@@ -333,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ['kpiLikes', kpi.total_likes],
             ['kpiShares', kpi.total_shares],
             ['kpiUnreplied', kpi.unreplied_comments],
+            ['kpiUnreplied2', kpi.unreplied_comments],
             ['kpiContacts', kpi.total_contacts],
         ];
         pairs.forEach(([id, val]) => {
@@ -340,99 +375,61 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) animateValue(el, val || 0);
         });
 
-        // Total views from engagement data
-        const viewsEl = document.getElementById('kpiViews');
-        if (viewsEl && engagement) {
+        const viewsEls = ['kpiViews', 'kpiViews2'];
+        if (engagement) {
             const totalViews = Object.values(engagement).reduce((sum, e) => sum + (e.views || 0), 0);
-            animateValue(viewsEl, totalViews);
+            viewsEls.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) animateValue(el, totalViews);
+            });
         }
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  SENTIMENT DOUGHNUT (with center text + % tooltips)
+    //  RESPONSE TRACKER — DOUGHNUT CHART (replied vs unreplied)
     // ═══════════════════════════════════════════════════════════════
-    function renderSentimentChart(sentiment) {
-        const canvas = document.getElementById('sentimentChart');
+    function renderResponseChart(kpi) {
+        const canvas = document.getElementById('responseChart');
         if (!canvas) return;
-        if (sentimentChart) sentimentChart.destroy();
+        if (responseChart) responseChart.destroy();
 
-        const labels = Object.keys(sentiment || {});
-        const values = Object.values(sentiment || {});
-        const total = values.reduce((a, b) => a + b, 0);
+        const total = kpi ? (kpi.total_comments || 0) : 0;
+        const unreplied = kpi ? (kpi.unreplied_comments || 0) : 0;
+        const replied = total - unreplied;
 
-        // Update total badge
-        const totalEl = document.getElementById('sentimentTotal');
-        if (totalEl) totalEl.textContent = total ? `${total.toLocaleString()} total` : '';
+        const totalEl = document.getElementById('responseTotal');
+        if (totalEl) totalEl.textContent = total ? `${total.toLocaleString()} comments` : '';
 
-        if (labels.length === 0 || total === 0) {
-            showEmpty('sentimentChartWrapper', 'sentimentSkeleton', 'sentimentEmpty');
+        if (total === 0) {
+            showEmpty('responseChartWrapper', 'responseSkeleton', 'responseEmpty');
             return;
         }
 
-        const colors = labels.map(l => (SENTIMENT_COLORS[l] || SENTIMENT_COLORS.unknown).bg);
-        const hoverColors = labels.map(l => (SENTIMENT_COLORS[l] || SENTIMENT_COLORS.unknown).bg);
-
-        // Center text plugin (instance-specific)
-        const centerTextPlugin = {
-            id: 'centerText',
-            afterDraw(chart) {
-                const { ctx, chartArea: { top, bottom, left, right } } = chart;
-                const centerX = (left + right) / 2;
-                const centerY = (top + bottom) / 2;
-
-                ctx.save();
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-
-                ctx.font = "bold 28px 'Inter', system-ui, sans-serif";
-                ctx.fillStyle = '#1f2937';
-                ctx.fillText(total.toLocaleString(), centerX, centerY - 8);
-
-                ctx.font = "500 12px 'Inter', system-ui, sans-serif";
-                ctx.fillStyle = '#9ca3af';
-                ctx.fillText('comments', centerX, centerY + 16);
-                ctx.restore();
-            }
-        };
-
-        sentimentChart = new Chart(canvas, {
+        responseChart = new Chart(canvas, {
             type: 'doughnut',
             data: {
-                labels: labels.map(l => capitalize(l)),
+                labels: ['Replied', 'Unreplied'],
                 datasets: [{
-                    data: values,
-                    backgroundColor: colors,
-                    hoverBackgroundColor: hoverColors,
-                    borderWidth: 3,
-                    borderColor: '#ffffff',
-                    hoverBorderColor: '#ffffff',
-                    hoverOffset: 8,
+                    data: [replied, unreplied],
+                    backgroundColor: ['#22c55e', '#f59e0b'],
+                    hoverBackgroundColor: ['#16a34a', '#d97706'],
+                    borderWidth: 0,
+                    spacing: 2,
                 }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '68%',
-                layout: { padding: 8 },
+                cutout: '65%',
+                layout: { padding: 4 },
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            padding: window.innerWidth < 640 ? 10 : 16,
+                            padding: 12,
                             usePointStyle: true,
                             pointStyle: 'circle',
-                            font: { size: window.innerWidth < 640 ? 10 : 12, weight: '500' },
-                            generateLabels(chart) {
-                                const data = chart.data;
-                                return data.labels.map((label, i) => ({
-                                    text: `${label}  (${data.datasets[0].data[i]})`,
-                                    fillStyle: data.datasets[0].backgroundColor[i],
-                                    strokeStyle: 'transparent',
-                                    pointStyle: 'circle',
-                                    index: i,
-                                    hidden: false,
-                                }));
-                            },
+                            font: { size: 11, weight: '500' },
                         },
                     },
                     tooltip: {
@@ -447,13 +444,271 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                 },
             },
-            plugins: [centerTextPlugin],
+            plugins: [{
+                id: 'centerText',
+                afterDraw(chart) {
+                    const { ctx, width, height } = chart;
+                    const pct = total > 0 ? Math.round((replied / total) * 100) : 0;
+                    ctx.save();
+                    ctx.font = 'bold 22px Inter, Segoe UI, sans-serif';
+                    ctx.fillStyle = '#16a34a';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                    ctx.fillText(pct + '%', width / 2, centerY - 8);
+                    ctx.font = '11px Inter, Segoe UI, sans-serif';
+                    ctx.fillStyle = '#6b7280';
+                    ctx.fillText('replied', width / 2, centerY + 14);
+                    ctx.restore();
+                },
+            }],
+        });
+        showChart('responseChartWrapper', 'responseSkeleton', 'responseEmpty');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  COMMENT SHARE BY PLATFORM — PIE CHART
+    // ═══════════════════════════════════════════════════════════════
+    function renderCommentShareChart(commentPlatforms) {
+        const canvas = document.getElementById('commentShareChart');
+        if (!canvas) return;
+        if (commentShareChart) commentShareChart.destroy();
+
+        const entries = Object.entries(commentPlatforms || {}).filter(([, count]) => count > 0);
+        const total = entries.reduce((sum, [, count]) => sum + count, 0);
+
+        const totalEl = document.getElementById('commentShareTotal');
+        if (totalEl) totalEl.textContent = total ? `${total.toLocaleString()} comments` : '';
+
+        if (entries.length === 0) {
+            showEmpty('commentShareChartWrapper', 'commentShareSkeleton', 'commentShareEmpty');
+            return;
+        }
+
+        entries.sort((a, b) => b[1] - a[1]);
+        const labels = entries.map(([p]) => PLATFORM_LABELS[p] || capitalize(p));
+        const values = entries.map(([, count]) => count);
+        const colors = entries.map(([p]) => (PLATFORM_COLORS[p] || { bg: '#6366f1' }).bg);
+        const lightColors = entries.map(([p]) => (PLATFORM_COLORS[p] || { light: 'rgba(13,148,136,0.15)' }).light);
+
+        commentShareChart = new Chart(canvas, {
+            type: 'pie',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors,
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 4 },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 10, weight: '500' },
+                        },
+                    },
+                    tooltip: {
+                        ...tooltipConfig,
+                        callbacks: {
+                            label(ctx) {
+                                const val = ctx.raw;
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return ` ${ctx.label}: ${val.toLocaleString()} comments (${pct}%)`;
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        showChart('commentShareChartWrapper', 'commentShareSkeleton', 'commentShareEmpty');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  VIEWS BY CHANNEL — HORIZONTAL BAR CHART
+    // ═══════════════════════════════════════════════════════════════
+    function renderViewsChart(engagement) {
+        const canvas = document.getElementById('viewsChart');
+        if (!canvas) return;
+        if (viewsChart) viewsChart.destroy();
+
+        // Show ALL platforms (even those with 0 views) so the chart is never empty
+        const entries = Object.entries(engagement || {});
+        const totalViews = entries.reduce((sum, [, e]) => sum + (e.views || 0), 0);
+
+        const totalEl = document.getElementById('viewsBreakdownTotal');
+        if (totalEl) totalEl.textContent = totalViews ? `${formatNumber(totalViews)} total` : '';
+
+        if (entries.length === 0) {
+            showEmpty('viewsChartWrapper', 'viewsSkeleton', 'viewsEmpty');
+            return;
+        }
+
+        entries.sort((a, b) => (b[1].views || 0) - (a[1].views || 0));
+        const labels = entries.map(([p]) => PLATFORM_LABELS[p] || capitalize(p));
+        const values = entries.map(([, e]) => e.views || 0);
+        const colors = entries.map(([p]) => (PLATFORM_COLORS[p] || { bg: '#6366f1' }).bg);
+
+        viewsChart = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    hoverBackgroundColor: colors,
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                    spacing: 2,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                layout: { padding: 4 },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            font: { size: 10, weight: '500' },
+                        },
+                    },
+                    tooltip: {
+                        ...tooltipConfig,
+                        callbacks: {
+                            label(ctx) {
+                                const pct = totalViews > 0 ? ((ctx.raw / totalViews) * 100).toFixed(1) : '0.0';
+                                return ` ${ctx.label}: ${formatNumber(ctx.raw)} views (${pct}%)`;
+                            },
+                        },
+                    },
+                },
+            },
+            plugins: [{
+                id: 'viewsCenterText',
+                afterDraw(chart) {
+                    const { ctx, width } = chart;
+                    ctx.save();
+                    ctx.font = 'bold 20px Inter, Segoe UI, sans-serif';
+                    ctx.fillStyle = '#374151';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+                    ctx.fillText(formatNumber(totalViews), width / 2, centerY - 8);
+                    ctx.font = '11px Inter, Segoe UI, sans-serif';
+                    ctx.fillStyle = '#6b7280';
+                    ctx.fillText('views', width / 2, centerY + 14);
+                    ctx.restore();
+                },
+            }],
+        });
+        showChart('viewsChartWrapper', 'viewsSkeleton', 'viewsEmpty');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SENTIMENT — POLAR AREA CHART
+    // ═══════════════════════════════════════════════════════════════
+    function renderSentimentChart(sentiment) {
+        const canvas = document.getElementById('sentimentChart');
+        if (!canvas) return;
+        if (sentimentChart) sentimentChart.destroy();
+
+        const labels = Object.keys(sentiment || {});
+        const values = Object.values(sentiment || {});
+        const total = values.reduce((a, b) => a + b, 0);
+
+        const totalEl = document.getElementById('sentimentTotal');
+        if (totalEl) totalEl.textContent = total ? `${total.toLocaleString()} total` : '';
+
+        if (labels.length === 0 || total === 0) {
+            showEmpty('sentimentChartWrapper', 'sentimentSkeleton', 'sentimentEmpty');
+            return;
+        }
+
+        const colors = labels.map(l => (SENTIMENT_COLORS[l] || SENTIMENT_COLORS.unknown).bg);
+        const lightColors = labels.map(l => (SENTIMENT_COLORS[l] || SENTIMENT_COLORS.unknown).light);
+
+        // Ensure small segments (like Lead) are visible in polar area chart:
+        // floor each value at 4% of the max so tiny segments still render.
+        // Real values are kept for tooltips/legend via the `realValues` array.
+        const realValues = [...values];
+        const maxVal = Math.max(...values);
+        const minVisible = maxVal * 0.04;
+        const displayValues = values.map(v => Math.max(v, minVisible));
+
+        sentimentChart = new Chart(canvas, {
+            type: 'polarArea',
+            data: {
+                labels: labels.map(l => capitalize(l)),
+                datasets: [{
+                    data: displayValues,
+                    backgroundColor: lightColors,
+                    borderColor: colors,
+                    borderWidth: 2,
+                    hoverBackgroundColor: colors.map(c => c + '40'),
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 4 },
+                scales: {
+                    r: {
+                        display: false,
+                    },
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 12,
+                            usePointStyle: true,
+                            pointStyle: 'rectRounded',
+                            font: { size: 11, weight: '500' },
+                            generateLabels(chart) {
+                                const data = chart.data;
+                                return data.labels.map((label, i) => ({
+                                    text: `${label} (${realValues[i].toLocaleString()})`,
+                                    fillStyle: data.datasets[0].borderColor[i],
+                                    strokeStyle: 'transparent',
+                                    pointStyle: 'rectRounded',
+                                    index: i,
+                                    hidden: false,
+                                }));
+                            },
+                        },
+                    },
+                    tooltip: {
+                        ...tooltipConfig,
+                        callbacks: {
+                            label(ctx) {
+                                const val = realValues[ctx.dataIndex];
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return ` ${ctx.label}: ${val.toLocaleString()} (${pct}%)`;
+                            },
+                        },
+                    },
+                },
+            },
         });
         showChart('sentimentChartWrapper', 'sentimentSkeleton', 'sentimentEmpty');
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  PLATFORM HORIZONTAL BAR
+    //  PLATFORM — VERTICAL BAR CHART
     // ═══════════════════════════════════════════════════════════════
     function renderPlatformChart(platforms) {
         const canvas = document.getElementById('platformChart');
@@ -471,12 +726,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Sort by count descending
         entries.sort((a, b) => b[1] - a[1]);
         const labels = entries.map(([p]) => PLATFORM_LABELS[p] || capitalize(p));
         const values = entries.map(([, c]) => c);
         const colors = entries.map(([p]) => (PLATFORM_COLORS[p] || { bg: '#6366f1' }).bg);
-        const lightColors = entries.map(([p]) => (PLATFORM_COLORS[p] || { light: 'rgba(99,102,241,0.12)' }).light);
 
         platformChart = new Chart(canvas, {
             type: 'bar',
@@ -487,16 +740,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     data: values,
                     backgroundColor: colors,
                     hoverBackgroundColor: colors,
-                    borderRadius: 6,
+                    borderRadius: 8,
                     borderSkipped: false,
-                    barThickness: 28,
+                    maxBarThickness: 40,
                 }],
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                indexAxis: 'y',
-                layout: { padding: { right: 16 } },
+                layout: { padding: { top: 8 } },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
@@ -511,16 +763,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 scales: {
                     x: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
-                        ticks: { stepSize: 1, font: { size: 11 } },
+                        grid: { display: false },
+                        ticks: { font: { size: 10, weight: '500' }, color: '#374151' },
                     },
                     y: {
-                        grid: { display: false },
-                        ticks: {
-                            font: { size: 12, weight: '500' },
-                            color: '#374151',
-                        },
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+                        ticks: { stepSize: 1, font: { size: 10 } },
                     },
                 },
             },
@@ -529,7 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  TIMELINE AREA LINE (gradient fill, formatted dates)
+    //  COMMENT ACTIVITY — BAR CHART (full width)
     // ═══════════════════════════════════════════════════════════════
     function renderTimelineChart(timeline) {
         const canvas = document.getElementById('timelineChart');
@@ -551,30 +800,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const ctx = canvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height || 260);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
-        gradient.addColorStop(0.7, 'rgba(99, 102, 241, 0.05)');
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        // Assign each bar a different color from the vibrant palette
+        const barColors = counts.map((_, i) => TIMELINE_BAR_COLORS[i % TIMELINE_BAR_COLORS.length]);
+        const barHoverColors = barColors.map(c => c + 'cc');
 
         timelineChart = new Chart(canvas, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: dates.map(d => formatDate(d)),
                 datasets: [{
                     label: 'Comments',
                     data: counts,
-                    borderColor: '#6366f1',
-                    backgroundColor: gradient,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: dates.length > 20 ? 0 : 4,
-                    pointHoverRadius: 6,
-                    pointBackgroundColor: '#6366f1',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointHitRadius: 10,
-                    borderWidth: 2.5,
+                    backgroundColor: barColors,
+                    hoverBackgroundColor: barHoverColors,
+                    borderRadius: 6,
+                    borderSkipped: false,
                 }],
             },
             options: {
@@ -597,7 +837,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ticks: {
                             maxRotation: 0,
                             autoSkip: true,
-                            maxTicksLimit: 8,
+                            maxTicksLimit: 12,
                             font: { size: 11 },
                         },
                     },
@@ -613,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  ENGAGEMENT BY PLATFORM (grouped bar: likes, comments, shares)
+    //  ENGAGEMENT — RADAR CHART
     // ═══════════════════════════════════════════════════════════════
     function renderEngagementChart(engagement) {
         const canvas = document.getElementById('engagementChart');
@@ -636,24 +876,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     {
                         label: 'Likes',
                         data: entries.map(([, e]) => e.likes),
-                        backgroundColor: 'rgba(251, 113, 133, 0.85)',
-                        hoverBackgroundColor: '#fb7185',
+                        backgroundColor: '#ef4444',
+                        hoverBackgroundColor: '#dc2626',
                         borderRadius: 4,
                         borderSkipped: false,
                     },
                     {
                         label: 'Comments',
                         data: entries.map(([, e]) => e.comments),
-                        backgroundColor: 'rgba(96, 165, 250, 0.85)',
-                        hoverBackgroundColor: '#60a5fa',
+                        backgroundColor: '#3b82f6',
+                        hoverBackgroundColor: '#2563eb',
                         borderRadius: 4,
                         borderSkipped: false,
                     },
                     {
                         label: 'Shares',
                         data: entries.map(([, e]) => e.shares),
-                        backgroundColor: 'rgba(52, 211, 153, 0.85)',
-                        hoverBackgroundColor: '#34d399',
+                        backgroundColor: '#eab308',
+                        hoverBackgroundColor: '#ca8a04',
                         borderRadius: 4,
                         borderSkipped: false,
                     },
@@ -662,14 +902,13 @@ document.addEventListener('DOMContentLoaded', () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
                         ...tooltipConfig,
                         callbacks: {
                             label(ctx) {
-                                return ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString()}`;
+                                return ` ${ctx.dataset.label}: ${formatNumber(ctx.raw)}`;
                             },
                         },
                     },
@@ -677,13 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { font: { size: 11, weight: '500' }, color: '#374151' },
+                        ticks: { font: { size: 10, weight: '500' }, color: '#374151' },
                     },
                     y: {
                         beginAtZero: true,
                         grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
                         ticks: {
-                            font: { size: 11 },
+                            font: { size: 10 },
                             callback(val) { return formatNumber(val); },
                         },
                     },
@@ -729,8 +968,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="flex items-center gap-3 mt-0.5">
                             <span class="text-xs" style="color:${platformColor}"><i class="${icon}"></i></span>
                             <span class="text-xs text-gray-400"><i class="fas fa-heart text-rose-300 mr-0.5"></i>${formatNumber(p.likes)}</span>
-                            <span class="text-xs text-gray-400"><i class="fas fa-comment text-blue-300 mr-0.5"></i>${formatNumber(p.comments)}</span>
-                            <span class="text-xs text-gray-400"><i class="fas fa-share text-emerald-300 mr-0.5"></i>${formatNumber(p.shares)}</span>
+                            <span class="text-xs text-gray-400"><i class="fas fa-comment text-indigo-300 mr-0.5"></i>${formatNumber(p.comments)}</span>
+                            <span class="text-xs text-gray-400"><i class="fas fa-share text-amber-300 mr-0.5"></i>${formatNumber(p.shares)}</span>
                         </div>
                     </div>
                     <div class="flex-shrink-0 text-right">
@@ -758,10 +997,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        container.innerHTML = comments.map(c => `
+        container.innerHTML = comments.map(c => {
+            const initial = (c.author_name || '?').charAt(0).toUpperCase();
+            return `
             <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
                 <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <i class="fas fa-user text-indigo-500 text-xs"></i>
+                    <span class="text-indigo-600 text-xs font-bold">${initial}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
@@ -777,8 +1018,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -798,8 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const typeClasses = {
-            lead: 'bg-blue-100 text-blue-700',
-            customer: 'bg-green-100 text-green-700',
+            lead: 'bg-indigo-100 text-indigo-700',
+            customer: 'bg-emerald-100 text-emerald-700',
         };
 
         container.innerHTML = contacts.map(ct => {
@@ -810,8 +1051,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
                 <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition">
-                    <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <i class="fas fa-address-book text-green-500 text-xs"></i>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-address-book text-emerald-500 text-xs"></i>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
@@ -828,16 +1069,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    //  TRENDING KEYWORDS (TF-IDF word popularity chips)
+    //  TRENDING KEYWORDS (teal/emerald gradient chips)
     // ═══════════════════════════════════════════════════════════════
-
-    // Indigo palette mapped to score intensity (high → vivid, low → pale)
     const KEYWORD_COLORS = [
-        { bg: 'bg-indigo-600', text: 'text-white',       size: 'text-base',  px: 'px-4 py-1.5' },  // score >= 0.8
-        { bg: 'bg-indigo-500', text: 'text-white',       size: 'text-sm',    px: 'px-3.5 py-1.5' },// score >= 0.6
-        { bg: 'bg-indigo-400', text: 'text-white',       size: 'text-sm',    px: 'px-3 py-1' },    // score >= 0.4
-        { bg: 'bg-indigo-200', text: 'text-indigo-800',  size: 'text-sm',    px: 'px-3 py-1' },    // score >= 0.2
-        { bg: 'bg-indigo-100', text: 'text-indigo-600',  size: 'text-xs',    px: 'px-2.5 py-1' },  // score < 0.2
+        { bg: 'bg-rose-500',    text: 'text-white',        size: 'text-base', px: 'px-4 py-1.5' },
+        { bg: 'bg-blue-500',    text: 'text-white',        size: 'text-sm',   px: 'px-3.5 py-1.5' },
+        { bg: 'bg-emerald-500', text: 'text-white',        size: 'text-sm',   px: 'px-3 py-1' },
+        { bg: 'bg-amber-400',   text: 'text-amber-900',    size: 'text-sm',   px: 'px-3 py-1' },
+        { bg: 'bg-purple-200',  text: 'text-purple-700',   size: 'text-xs',   px: 'px-2.5 py-1' },
     ];
 
     function getKeywordStyle(score) {
@@ -907,6 +1146,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Initial load ────────────────────────────────────────────
-    loadDashboardData();
-    loadKeywords();
+    // Use server-embedded data for instant chart rendering (no API call)
+    if (window.__DASHBOARD_DATA__) {
+        const data = window.__DASHBOARD_DATA__;
+        renderAllCharts(data);
+        // Render keywords instantly from embedded data
+        if (data.keywords !== undefined) {
+            renderKeywords(data.keywords, data.keywords_total || 0);
+        } else {
+            loadKeywords();
+        }
+        delete window.__DASHBOARD_DATA__;
+    } else {
+        loadDashboardData();
+        loadKeywords();
+    }
 });

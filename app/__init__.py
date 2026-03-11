@@ -48,6 +48,7 @@ def create_app(config_name=None):
     from app.routes.contacts import contacts_bp
     from app.routes.admin import admin_bp
     from app.routes.api import api_bp
+    from app.routes.public import public_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -58,6 +59,7 @@ def create_app(config_name=None):
     app.register_blueprint(contacts_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(public_bp)
 
     # User loader
     from app.models.user import User
@@ -112,7 +114,7 @@ def create_app(config_name=None):
     def index():
         if current_user.is_authenticated:
             return redirect(url_for("dashboard.index"))
-        return redirect(url_for("auth.login"))
+        return redirect(url_for("public.home"))
 
     # Custom error handlers
     from flask import render_template

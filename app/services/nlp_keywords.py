@@ -5,8 +5,9 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer, ENGLISH_STOP_WORDS
 
 
-# Extended stop words: sklearn defaults + social-media noise
+# Extended stop words: sklearn defaults + social-media noise + generic filler
 _EXTRA_STOP = {
+    # Social media filler
     "like", "just", "got", "lol", "lmao", "omg", "btw", "tbh", "imo",
     "yeah", "yes", "hey", "hi", "hello", "thanks", "thank", "please",
     "ok", "okay", "oh", "wow", "really", "thing", "things", "gonna",
@@ -14,6 +15,17 @@ _EXTRA_STOP = {
     "won", "wouldn", "couldn", "shouldn", "ve", "ll", "re", "let",
     "know", "think", "want", "make", "good", "great", "nice", "best",
     "video", "comment", "subscribe", "channel", "follow", "post",
+    # Generic verbs/adverbs/fillers
+    "go", "come", "get", "see", "look", "say", "said", "tell", "told",
+    "give", "gave", "take", "took", "put", "use", "used", "try", "need",
+    "also", "much", "many", "very", "even", "still", "right", "well",
+    "new", "one", "two", "first", "way", "day", "time", "lot", "bit",
+    "people", "guy", "man", "girl", "bro", "sir", "ma", "madam",
+    "love", "loved", "amazing", "awesome", "beautiful", "wonderful",
+    "haha", "hehe", "ha", "lmfao", "rofl", "xd", "bruh", "bhai",
+    "plz", "pls", "thx", "ty", "np", "gg", "rip", "nah", "yep", "yup",
+    "dm", "inbox", "link", "bio", "page", "share", "shared", "pic",
+    "photo", "image", "song", "edit", "app", "website", "click",
 }
 STOP_WORDS = ENGLISH_STOP_WORDS.union(_EXTRA_STOP)
 
@@ -28,6 +40,7 @@ _EMOJI_RE = re.compile(
     flags=re.UNICODE,
 )
 _SPECIAL_RE = re.compile(r"[^a-z\s]")
+_SINGLE_CHAR_RE = re.compile(r"\b[a-z]\b")
 
 
 def _clean_text(text):
@@ -37,12 +50,18 @@ def _clean_text(text):
     text = _MENTION_RE.sub(" ", text)
     text = _EMOJI_RE.sub(" ", text)
     text = _SPECIAL_RE.sub(" ", text)
+    text = _SINGLE_CHAR_RE.sub(" ", text)  # remove single letters
     return " ".join(text.split())  # collapse whitespace
 
 
 def extract_top_keywords(comments, top_n=30):
     """Extract the most meaningful keywords from a list of comment strings
     using TF-IDF with unigrams and bigrams.
+
+    Bigrams are boosted (1.5x) since multi-word phrases are usually more
+    meaningful than single words.  Unigrams that are fully contained in a
+    higher-scoring bigram are removed to avoid duplication (e.g. if
+    "customer service" ranks high, standalone "customer" is dropped).
 
     Parameters
     ----------
@@ -70,10 +89,11 @@ def extract_top_keywords(comments, top_n=30):
     vectorizer = TfidfVectorizer(
         ngram_range=(1, 2),
         stop_words=list(STOP_WORDS),
-        min_df=2,
-        max_df=0.85,
+        min_df=3,
+        max_df=0.80,
         max_features=5000,
         sublinear_tf=True,
+        token_pattern=r"\b[a-z]{2,}\b",  # only words with 2+ letters
     )
 
     try:
@@ -87,6 +107,11 @@ def extract_top_keywords(comments, top_n=30):
     # Sum TF-IDF scores across all documents for each term
     scores = tfidf_matrix.sum(axis=0).A1  # dense 1-D array
 
+    # Boost bigrams by 1.5x — multi-word phrases are more meaningful
+    for i, name in enumerate(feature_names):
+        if " " in name:
+            scores[i] *= 1.5
+
     # Rank descending
     ranked_indices = scores.argsort()[::-1]
 
@@ -95,12 +120,27 @@ def extract_top_keywords(comments, top_n=30):
     if max_score == 0:
         max_score = 1.0
 
-    results = []
-    for idx in ranked_indices[:top_n]:
+    # First pass: collect candidates
+    candidates = []
+    for idx in ranked_indices[:top_n * 3]:  # over-fetch for dedup
         keyword = feature_names[idx]
         normalised = round(float(scores[idx] / max_score), 4)
         if normalised > 0:
-            results.append({"keyword": keyword, "score": normalised})
+            candidates.append({"keyword": keyword, "score": normalised})
+
+    # Deduplicate: remove unigrams that are part of a higher-scoring bigram
+    accepted_bigrams = [c["keyword"] for c in candidates if " " in c["keyword"]]
+    results = []
+    for c in candidates:
+        if len(results) >= top_n:
+            break
+        kw = c["keyword"]
+        # If it's a unigram, check if it's already covered by an accepted bigram
+        if " " not in kw:
+            covered = any(kw in bg.split() for bg in accepted_bigrams)
+            if covered:
+                continue
+        results.append(c)
 
     return results
 

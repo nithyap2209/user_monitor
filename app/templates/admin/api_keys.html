@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="mb-6">
-    <a href="{{ url_for('admin.companies') }}" class="text-sm text-indigo-600 hover:underline">&larr; Back to Companies</a>
+    <a href="{{ url_for('pages.index') }}" class="text-sm text-indigo-600 hover:underline">&larr; Back to Connected Pages</a>
     <h2 class="text-2xl font-bold text-gray-800 mt-2">API Keys &mdash; {{ company.name }}</h2>
     <p class="text-sm text-gray-500 mt-1">Configure platform API credentials for this company. Each platform requires specific fields.</p>
 </div>
@@ -24,9 +24,10 @@
     },
     'youtube': {
         'api_key': {'label': 'API Key', 'help': 'YouTube Data API v3 key from Google Cloud Console'},
-        'access_token': {'label': 'OAuth Access Token', 'help': 'Optional: needed for posting replies / write operations'},
         'page_id': {'label': 'Channel ID', 'help': 'Your YouTube channel ID (starts with UC...)'},
-        'refresh_token': {'label': 'OAuth Refresh Token', 'help': 'Optional: for auto-refreshing the OAuth token'},
+        'api_secret': {'label': 'OAuth Client Secret', 'help': 'OAuth 2.0 Client Secret from Google Cloud Console > Credentials > OAuth 2.0 Client IDs'},
+        'access_token': {'label': 'OAuth Access Token', 'help': 'Auto-filled when you click "Connect YouTube OAuth" on the Pages screen'},
+        'refresh_token': {'label': 'OAuth Refresh Token', 'help': 'Auto-filled when you click "Connect YouTube OAuth" on the Pages screen'},
     },
     'linkedin': {
         'access_token': {'label': 'Access Token', 'help': 'LinkedIn OAuth 2.0 access token'},
@@ -126,6 +127,32 @@
                     </div>
                     {% endif %}
                     {% endfor %}
+
+                    {% if p == 'youtube' %}
+                    {# OAuth Client ID is stored in extra_data JSON #}
+                    {% set yt_oauth_id = 'f_yt_oauth_client_id' %}
+                    {% set yt_oauth_val = (key.extra_data or {}).get('oauth_client_id', '') if key else '' %}
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">OAuth Client ID</label>
+                        <div class="relative">
+                            <input type="password" name="oauth_client_id" id="{{ yt_oauth_id }}"
+                                   value="{{ yt_oauth_val }}"
+                                   class="w-full px-3 py-2 pr-16 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                   placeholder="OAuth 2.0 Client ID from Google Cloud Console">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-1 gap-0.5">
+                                <button type="button" onclick="toggleFieldVisibility('{{ yt_oauth_id }}')"
+                                        class="p-1.5 text-gray-400 hover:text-gray-600 transition rounded" title="Show / hide">
+                                    <i id="{{ yt_oauth_id }}_eye" class="fas fa-eye text-xs"></i>
+                                </button>
+                                <button type="button" onclick="copyFieldValue('{{ yt_oauth_id }}')"
+                                        class="p-1.5 text-gray-400 hover:text-gray-600 transition rounded" title="Copy to clipboard">
+                                    <i class="fas fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">OAuth 2.0 Client ID from Google Cloud Console > Credentials. Required for posting replies.</p>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="mt-4 flex items-center gap-3">
                     <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">

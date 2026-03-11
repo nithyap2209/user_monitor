@@ -26,7 +26,7 @@
 
 <!-- Filter Bar -->
 <div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
-    <form id="commentFilterForm" method="GET" class="flex flex-wrap items-center gap-3">
+    <form id="commentFilterForm" method="GET" class="flex flex-wrap items-end gap-3">
         <div class="w-full sm:w-auto">
             <label class="block text-xs font-medium text-gray-500 mb-1">Platform</label>
             <select name="platform" id="filterPlatform"
@@ -179,7 +179,7 @@
                     {% endif %}
 
                     {% if comment.is_replied %}
-                    <span class="text-xs text-emerald-500">
+                    <span class="text-xs text-emerald-500 replied-badge">
                         <i class="fas fa-check-circle mr-0.5"></i> Replied
                     </span>
                     {% endif %}
@@ -187,6 +187,18 @@
 
                 <!-- Action buttons (permission-gated) -->
                 <div class="flex flex-wrap items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+                    {% if comment.platform == 'youtube' and comment.post and comment.post.platform_post_id %}
+                    <a href="https://www.youtube.com/watch?v={{ comment.post.platform_post_id }}{% if comment.platform_comment_id %}&lc={{ comment.platform_comment_id }}{% endif %}"
+                       target="_blank" rel="noopener noreferrer"
+                       class="px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition inline-flex items-center gap-1">
+                        <i class="fab fa-youtube"></i> View on YouTube
+                    </a>
+                    {% elif comment.post and comment.post.permalink %}
+                    <a href="{{ comment.post.permalink }}" target="_blank" rel="noopener noreferrer"
+                       class="px-2.5 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition inline-flex items-center gap-1">
+                        <i class="fas fa-external-link-alt"></i> View on {{ platform_labels.get(comment.platform, comment.platform) }}
+                    </a>
+                    {% endif %}
                     {% if has_permission('comments', 'reply') %}
                     <button type="button" onclick="toggleReplyForm({{ comment.id }})"
                             id="reply-btn-{{ comment.id }}"

@@ -175,6 +175,144 @@ def connect_linkedin():
     return redirect(f"https://www.linkedin.com/oauth/v2/authorization?{params}")
 
 
+# ── YouTube OAuth ────────────────────────────────────────
+
+# YouTube requires OAuth2 for write operations (posting replies).
+# The API key (stored in CompanyAPIKey.api_key) handles reads.
+# OAuth Client ID is stored in CompanyAPIKey.extra_data["oauth_client_id"]
+# OAuth Client Secret is stored in CompanyAPIKey.api_secret
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+YT_OAUTH_SCOPES = "https://www.googleapis.com/auth/youtube.force-ssl"
+
+
+def _youtube_callback_url():
+    """Build the YouTube OAuth callback URL."""
+    url = url_for("pages.youtube_oauth_callback", _external=True)
+    parsed = urlparse(url)
+    is_local = parsed.hostname in ("localhost", "127.0.0.1", "0.0.0.0")
+    if is_local:
+        url = urlunparse(parsed._replace(
+            scheme="http",
+            netloc=f"localhost:{parsed.port}" if parsed.port else "localhost",
+        ))
+    else:
+        if parsed.scheme == "http":
+            url = urlunparse(parsed._replace(scheme="https"))
+    return url
+
+
+@pages_bp.route("/connect/youtube-oauth")
+@login_required
+@permission_required("pages", "connect")
+def connect_youtube_oauth():
+    """Redirect to Google OAuth to authorize YouTube reply access."""
+    creds = CompanyAPIKey.get_for_company(current_user.company_id, "youtube")
+    if not creds or not creds.api_key:
+        flash("YouTube API key not configured. Go to Admin > API Keys first.", "danger")
+        return redirect(url_for("pages.index"))
+
+    # OAuth Client ID can be stored in extra_data or in api_secret's companion
+    oauth_client_id = None
+    if creds.extra_data and isinstance(creds.extra_data, dict):
+        oauth_client_id = creds.extra_data.get("oauth_client_id")
+
+    if not oauth_client_id:
+        flash(
+            "YouTube OAuth Client ID not configured. "
+            "Go to Admin > API Keys > YouTube and enter your OAuth Client ID "
+            "(from Google Cloud Console > Credentials > OAuth 2.0 Client IDs).",
+            "danger",
+        )
+        return redirect(url_for("pages.index"))
+
+    if not creds.api_secret:
+        flash(
+            "YouTube OAuth Client Secret not configured. "
+            "Go to Admin > API Keys > YouTube and enter your OAuth Client Secret.",
+            "danger",
+        )
+        return redirect(url_for("pages.index"))
+
+    session["oauth_platform"] = "youtube"
+    callback_url = _youtube_callback_url()
+
+    params = urlencode({
+        "client_id": oauth_client_id,
+        "redirect_uri": callback_url,
+        "response_type": "code",
+        "scope": YT_OAUTH_SCOPES,
+        "access_type": "offline",   # Get refresh_token
+        "prompt": "consent",        # Force consent to always get refresh_token
+        "state": "yt_connect",
+    })
+    return redirect(f"{GOOGLE_AUTH_URL}?{params}")
+
+
+@pages_bp.route("/youtube/callback")
+@login_required
+def youtube_oauth_callback():
+    """Handle Google OAuth callback for YouTube."""
+    code = request.args.get("code")
+    error = request.args.get("error")
+
+    session.pop("oauth_platform", None)
+
+    if error or not code:
+        flash(f"YouTube OAuth failed: {error or 'No authorization code received.'}", "danger")
+        return redirect(url_for("pages.index"))
+
+    creds = CompanyAPIKey.get_for_company(current_user.company_id, "youtube")
+    if not creds:
+        flash("YouTube API credentials not found.", "danger")
+        return redirect(url_for("pages.index"))
+
+    oauth_client_id = (creds.extra_data or {}).get("oauth_client_id")
+    oauth_client_secret = creds.api_secret
+
+    if not oauth_client_id or not oauth_client_secret:
+        flash("YouTube OAuth Client ID or Secret missing.", "danger")
+        return redirect(url_for("pages.index"))
+
+    callback_url = _youtube_callback_url()
+
+    # Exchange authorization code for access + refresh tokens
+    try:
+        resp = http_requests.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": oauth_client_id,
+            "client_secret": oauth_client_secret,
+            "redirect_uri": callback_url,
+            "grant_type": "authorization_code",
+        }, timeout=15)
+        token_data = resp.json()
+    except Exception as e:
+        flash(f"Token exchange failed: {e}", "danger")
+        return redirect(url_for("pages.index"))
+
+    if "error" in token_data:
+        flash(f"Token error: {token_data.get('error_description', token_data['error'])}", "danger")
+        return redirect(url_for("pages.index"))
+
+    access_token = token_data.get("access_token")
+    refresh_token = token_data.get("refresh_token")
+    expires_in = token_data.get("expires_in", 3600)
+
+    if not access_token:
+        flash("No access token received from Google.", "danger")
+        return redirect(url_for("pages.index"))
+
+    # Save tokens to CompanyAPIKey
+    creds.access_token = access_token
+    if refresh_token:
+        creds.refresh_token = refresh_token
+    creds.token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    db.session.commit()
+
+    flash("YouTube OAuth connected successfully! You can now reply to YouTube comments.", "success")
+    return redirect(url_for("pages.index"))
+
+
 def _handle_instagram_callback(code):
     """Exchange Facebook auth code for token, then discover Instagram Business accounts."""
     creds = CompanyAPIKey.get_for_company(current_user.company_id, "facebook")

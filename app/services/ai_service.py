@@ -7,7 +7,84 @@ model selection, and error handling.
 
 import os
 import json
+import logging
 import anthropic
+
+logger = logging.getLogger(__name__)
+
+# ── VADER NLP Sentiment Analyzer (lazy-loaded singleton) ──
+_vader_analyzer = None
+
+
+def _get_vader():
+    """Return a VADER SentimentIntensityAnalyzer, downloading data if needed."""
+    global _vader_analyzer
+    if _vader_analyzer is not None:
+        return _vader_analyzer
+    try:
+        import nltk
+        try:
+            from nltk.sentiment.vader import SentimentIntensityAnalyzer
+            _vader_analyzer = SentimentIntensityAnalyzer()
+        except LookupError:
+            nltk.download("vader_lexicon", quiet=True)
+            from nltk.sentiment.vader import SentimentIntensityAnalyzer
+            _vader_analyzer = SentimentIntensityAnalyzer()
+        return _vader_analyzer
+    except Exception:
+        return None
+
+
+def _textblob_sentiment(text):
+    """Return TextBlob polarity and subjectivity for text.
+
+    Returns:
+        tuple (polarity: float [-1,1], subjectivity: float [0,1])
+        or (0.0, 0.0) on failure.
+    """
+    try:
+        from textblob import TextBlob
+        blob = TextBlob(text)
+        return (blob.sentiment.polarity, blob.sentiment.subjectivity)
+    except Exception:
+        return (0.0, 0.0)
+
+
+def _nlp_preprocess(text):
+    """NLP preprocessing: tokenize, lemmatize, remove stop words.
+
+    Used for feature extraction (TextBlob, TF-IDF). Does NOT modify the
+    original text used for VADER — VADER needs capitalization, punctuation,
+    and emojis intact.
+    """
+    try:
+        import nltk
+        from nltk.tokenize import word_tokenize
+        from nltk.stem import WordNetLemmatizer
+        from nltk.corpus import stopwords
+
+        try:
+            stop_words = set(stopwords.words("english"))
+        except LookupError:
+            nltk.download("stopwords", quiet=True)
+            nltk.download("punkt_tab", quiet=True)
+            nltk.download("wordnet", quiet=True)
+            stop_words = set(stopwords.words("english"))
+
+        # Keep negation words — critical for sentiment analysis
+        negation_words = {"not", "no", "never", "nor", "neither", "hardly", "barely"}
+        stop_words -= negation_words
+
+        lemmatizer = WordNetLemmatizer()
+        tokens = word_tokenize(text.lower())
+        cleaned = [
+            lemmatizer.lemmatize(token)
+            for token in tokens
+            if token.isalpha() and token not in stop_words
+        ]
+        return " ".join(cleaned)
+    except Exception:
+        return text.lower()
 
 
 def _get_client(api_key=None):
@@ -18,8 +95,109 @@ def _get_client(api_key=None):
     return anthropic.Anthropic(api_key=key)
 
 
+# ── OpenAI GPT client (lazy-loaded singleton) ──
+_openai_client = None
+
+
+def _get_openai_client():
+    """Return an OpenAI client if OPENAI_API_KEY is set."""
+    global _openai_client
+    if _openai_client is not None:
+        return _openai_client
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    try:
+        from openai import OpenAI
+        _openai_client = OpenAI(api_key=key)
+        return _openai_client
+    except Exception:
+        return None
+
+
+def _get_openai_model():
+    """Return the configured OpenAI model (default: gpt-4o-mini)."""
+    return os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+
+_GPT_SENTIMENT_PROMPT = (
+    "You are a sentiment analysis expert specializing in multilingual social media comments. "
+    "You understand Tanglish (Tamil written in English script), Hinglish (Hindi written in English script), "
+    "Tamil script, Hindi script, and all major Indian languages mixed with English.\n\n"
+    "TANGLISH EXAMPLES:\n"
+    "- 'semma video da' → positive (means 'great video man')\n"
+    "- 'mokka content' → negative (means 'boring/bad content')\n"
+    "- 'nalla irukku' → positive (means 'it is good')\n"
+    "- 'Bro anga placements la iruka?' → neutral (asking about placements)\n"
+    "- 'சூப்பர் சார்' → positive (means 'super sir')\n"
+    "- 'vera level thalaiva' → positive (means 'next level boss')\n"
+    "- 'kaduppu content' → negative (means 'annoying content')\n\n"
+    "TAMIL SCRIPT EXAMPLES:\n"
+    "- 'நல்ல வீடியோ' → positive (means 'good video')\n"
+    "- 'மிகவும் மோசம்' → negative (means 'very bad')\n\n"
+    "RULES:\n"
+    "1. Classify as: positive, negative, neutral, lead, or business\n"
+    "2. Use 'lead' if the comment contains contact info (phone, email) or asks to be contacted\n"
+    "3. Use 'business' for business inquiries or partnership requests\n"
+    "4. Understand slang, abbreviations, emojis, sarcasm\n"
+    "5. Score is confidence from 0.0 to 1.0\n\n"
+    "Respond with ONLY a JSON object: {\"sentiment\": \"...\", \"score\": 0.0}\n\n"
+    "Comment: "
+)
+
+
+def _analyze_with_gpt(text):
+    """Analyze sentiment using OpenAI GPT (GPT-4o, GPT-4, GPT-3.5).
+
+    Particularly strong at understanding Tanglish, Hinglish, Tamil script,
+    sarcasm, and nuanced social media language.
+
+    Returns:
+        dict with 'sentiment' and 'score', or None on failure.
+    """
+    client = _get_openai_client()
+    if not client:
+        return None
+
+    try:
+        response = client.chat.completions.create(
+            model=_get_openai_model(),
+            max_tokens=80,
+            temperature=0,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a sentiment classifier. Respond with only JSON.",
+                },
+                {
+                    "role": "user",
+                    "content": _GPT_SENTIMENT_PROMPT + text,
+                },
+            ],
+        )
+        raw = response.choices[0].message.content.strip()
+        # Handle markdown code blocks
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        result = json.loads(raw)
+        sentiment = result.get("sentiment", "neutral")
+        score = float(result.get("score", 0.5))
+        if sentiment not in ("positive", "negative", "neutral", "lead", "business"):
+            sentiment = "neutral"
+        logger.info("GPT sentiment for '%s': %s (%.2f)", text[:60], sentiment, score)
+        return {"sentiment": sentiment, "score": max(0.0, min(1.0, score))}
+    except Exception as e:
+        logger.warning("GPT sentiment failed for '%s': %s", text[:60], e)
+        return None
+
+
 def analyze_sentiment(text, api_key=None):
-    """Classify comment sentiment using Claude.
+    """Classify comment sentiment using GPT → Claude → VADER+TextBlob ensemble.
+
+    Priority:
+    1. OpenAI GPT (if OPENAI_API_KEY set) — best for Tanglish/multilingual
+    2. Anthropic Claude (if ANTHROPIC_API_KEY set)
+    3. VADER + TextBlob + regional keywords ensemble (always available)
 
     Returns:
         dict with 'sentiment' (str) and 'score' (float 0-1).
@@ -28,38 +206,45 @@ def analyze_sentiment(text, api_key=None):
     if not text or not text.strip():
         return {"sentiment": "neutral", "score": 0.5}
 
-    client = _get_client(api_key)
-    if not client:
-        return _heuristic_sentiment(text)
+    # ── Try GPT first (best for Tanglish/multilingual) ──
+    gpt_result = _analyze_with_gpt(text)
+    if gpt_result:
+        return gpt_result
 
-    try:
-        message = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=100,
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        "Classify the sentiment of this social media comment. "
-                        "Respond with ONLY a JSON object with two keys:\n"
-                        '- "sentiment": one of "positive", "negative", "neutral", "lead", "business"\n'
-                        '- "score": confidence float between 0.0 and 1.0\n\n'
-                        'Use "lead" if the comment contains contact info (phone, email) or '
-                        'asks to be contacted. Use "business" if it\'s a business inquiry '
-                        "or partnership request.\n\n"
-                        f"Comment: {text}"
-                    ),
-                }
-            ],
-        )
-        result = json.loads(message.content[0].text.strip())
-        sentiment = result.get("sentiment", "neutral")
-        score = float(result.get("score", 0.5))
-        if sentiment not in ("positive", "negative", "neutral", "lead", "business"):
-            sentiment = "neutral"
-        return {"sentiment": sentiment, "score": max(0.0, min(1.0, score))}
-    except Exception:
-        return _heuristic_sentiment(text)
+    # ── Try Claude ──
+    client = _get_client(api_key)
+    if client:
+        try:
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=100,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "Classify the sentiment of this social media comment. "
+                            "Respond with ONLY a JSON object with two keys:\n"
+                            '- "sentiment": one of "positive", "negative", "neutral", "lead", "business"\n'
+                            '- "score": confidence float between 0.0 and 1.0\n\n'
+                            'Use "lead" if the comment contains contact info (phone, email) or '
+                            'asks to be contacted. Use "business" if it\'s a business inquiry '
+                            "or partnership request.\n\n"
+                            f"Comment: {text}"
+                        ),
+                    }
+                ],
+            )
+            result = json.loads(message.content[0].text.strip())
+            sentiment = result.get("sentiment", "neutral")
+            score = float(result.get("score", 0.5))
+            if sentiment not in ("positive", "negative", "neutral", "lead", "business"):
+                sentiment = "neutral"
+            return {"sentiment": sentiment, "score": max(0.0, min(1.0, score))}
+        except Exception:
+            pass
+
+    # ── Fallback: VADER + TextBlob + regional keywords ensemble ──
+    return _heuristic_sentiment(text)
 
 
 def get_supported_languages():
@@ -72,20 +257,20 @@ def get_supported_languages():
 
 
 def translate_text(text, target_language="en", source_language="auto"):
-    """Translate text to the target language.
+    """Translate text using deep-translator + py-trans (dual engine).
 
     Strategy:
-    1. Detect if text is Tanglish/Hinglish using word patterns.
-    2. If Tanglish/Hinglish detected → use Claude API (most accurate).
-    3. Otherwise → use Google Translate.
-    4. If Google Translate fails (returns similar text) → try Claude.
-    5. Final fallback → transliteration + Google Translate pipeline.
+    1. Hinglish → deep-translator with source='hi' (works natively).
+    2. First attempt: deep-translator (GoogleTranslator) with auto-detect.
+    3. If echoed back: py-trans Google engine (different auto-detection).
+    4. If still echoed: py-trans MyMemory engine.
+    5. Fallback: transliterate known Tamil/Hindi words → retry translation.
+    6. All other languages → deep-translator with source='auto'.
 
     Args:
         text: The text to translate.
         target_language: Language code (e.g. 'en', 'es', 'fr').
-        source_language: Language code or "auto".  When set explicitly,
-            transliteration is applied before translation.
+        source_language: Language code or "auto".
 
     Returns:
         dict with 'translated_text' (str) and 'detected_language' (str).
@@ -98,71 +283,144 @@ def translate_text(text, target_language="en", source_language="auto"):
     try:
         source = source_language if source_language != "auto" else "auto"
 
-        # Step 1: Detect Tanglish/Hinglish from word patterns
+        # Detect Tanglish/Hinglish in Latin-script text
         detected_indian = None
-        if _is_latin_script(text) and not _looks_like_english(text):
+        if _is_latin_script(text):
             detected_indian = _detect_indian_language(text)
 
-        # Step 1b: Detect mixed-script text (e.g. English + Tamil/Hindi script)
-        # Google Translate often mistranslates these — Claude handles them better
-        if _is_mixed_script(text):
-            claude_result = _translate_with_claude(text, target_language)
-            if claude_result:
-                return claude_result
+        # ── Hinglish: Google Translate handles Latin-script Hindi natively ──
+        if detected_indian == "hi":
+            translated = GoogleTranslator(source="hi", target=target_language).translate(text)
+            if translated and not _texts_are_similar(text, translated):
+                return {"translated_text": translated, "detected_language": "hinglish"}
 
-        # Step 2: If Tanglish/Hinglish detected, try Claude first (most accurate)
-        if detected_indian:
-            claude_result = _translate_with_claude(text, target_language, detected_indian)
-            if claude_result:
-                return claude_result
+        # ── Tanglish pipeline: aggressive transliterate → Tamil → English ──
+        if detected_indian == "ta":
+            tamil_text = _transliterate_aggressive(text, "ta")
+            if tamil_text and tamil_text != text:
+                # Check that meaningful transliteration occurred
+                native_chars = sum(1 for c in tamil_text if c.isalpha() and not c.isascii())
+                total_chars = sum(1 for c in tamil_text if c.isalpha())
+                if total_chars > 0 and (native_chars / total_chars) > 0.2:
+                    try:
+                        translated = GoogleTranslator(
+                            source="ta", target=target_language
+                        ).translate(tamil_text)
+                        if translated and not _texts_are_similar(text, translated):
+                            return {
+                                "translated_text": translated,
+                                "detected_language": "tanglish",
+                            }
+                    except Exception:
+                        pass
 
-            # Claude failed — try transliteration with detected language
-            # DON'T fall through to Google auto-detect (it misidentifies Tamil as Malayalam etc.)
-            translit_result = _try_transliterate_and_translate(text, target_language, detected_indian)
+        # ── First attempt: deep-translator with auto-detect ──
+        text_to_translate = text
+
+        # When source language is explicitly set and text is Latin script,
+        # transliterate known regional words to native script first
+        if source != "auto" and _is_latin_script(text):
+            native_text = _transliterate_to_native(text, source)
+            if native_text and native_text != text:
+                text_to_translate = native_text
+
+        translated = GoogleTranslator(source=source, target=target_language).translate(text_to_translate)
+
+        # If translation worked, return it
+        if translated and not _texts_are_similar(text, translated):
+            detected_lang = _detect_language_name(text)
+            if detected_indian == "ta":
+                detected_lang = "tanglish"
+            elif detected_indian == "hi":
+                detected_lang = "hinglish"
+            elif detected_indian == "mixed":
+                detected_lang = "mixed"
+            return {"translated_text": translated, "detected_language": detected_lang}
+
+        # ── Second attempt: py-trans Google engine (different auto-detection) ──
+        pytrans_result = _translate_with_pytrans(text, target_language, engine="google")
+        if pytrans_result:
+            detected_lang = pytrans_result.get("origin_lang", "unknown")
+            if detected_indian == "ta":
+                detected_lang = "tanglish"
+            elif detected_indian == "hi":
+                detected_lang = "hinglish"
+            return {"translated_text": pytrans_result["translation"], "detected_language": detected_lang}
+
+        # ── Third attempt: py-trans MyMemory engine ──
+        pytrans_mm = _translate_with_pytrans(text, target_language, engine="my_memory")
+        if pytrans_mm:
+            detected_lang = pytrans_mm.get("origin_lang", "unknown")
+            if detected_indian == "ta":
+                detected_lang = "tanglish"
+            elif detected_indian == "hi":
+                detected_lang = "hinglish"
+            return {"translated_text": pytrans_mm["translation"], "detected_language": detected_lang}
+
+        # ── Transliteration pipeline fallback ──
+        if detected_indian and detected_indian != "mixed":
+            translit_result = _try_transliterate_and_translate(
+                text, target_language, detected_indian
+            )
             if translit_result:
                 return {
                     "translated_text": translit_result["translated"],
                     "detected_language": _lang_code_to_name(translit_result["lang_code"]),
                 }
 
-        # Step 3: Try Google Translate
-        text_to_translate = text
+        # Try transliteration across multiple Indian languages
+        best = _try_transliterate_and_translate(text, target_language, source)
+        if best:
+            return {
+                "translated_text": best["translated"],
+                "detected_language": _lang_code_to_name(best["lang_code"]),
+            }
 
-        # When source language is explicitly set and text is in Latin script,
-        # transliterate to native script first
-        if source != "auto" and _is_latin_script(text):
-            native_text = _transliterate_to_native(text, source)
-            if native_text and native_text != text:
-                text_to_translate = native_text
-
-        translator = GoogleTranslator(source=source, target=target_language)
-        translated = translator.translate(text_to_translate)
-
-        # Step 4: If Google didn't translate properly, try Claude then transliteration
-        if _texts_are_similar(text, translated) and not _looks_like_english(text):
-            # Try Claude even without detected language hint
-            claude_result = _translate_with_claude(text, target_language)
-            if claude_result:
-                return claude_result
-
-            # Final fallback: transliteration across Indian languages
-            best = _try_transliterate_and_translate(text, target_language, source)
-            if best:
-                translated = best["translated"]
-                detected_code = best["lang_code"]
-                detected_lang = _lang_code_to_name(detected_code)
-                return {
-                    "translated_text": translated,
-                    "detected_language": detected_lang,
-                }
-
+        # Return whatever Google gave us (even if similar to original)
         detected_lang = _detect_language_name(text)
-        return {
-            "translated_text": translated,
-            "detected_language": detected_lang,
-        }
+        return {"translated_text": translated or text, "detected_language": detected_lang}
+
     except Exception:
         return {"translated_text": f"[Translation failed] {text}", "detected_language": "unknown"}
+
+
+def _translate_with_pytrans(text, target_language, engine="google"):
+    """Translate using py-trans library (Google, MyMemory, or translate.com).
+
+    py-trans uses a different Google Translate endpoint than deep-translator,
+    so it can sometimes produce different (better) auto-detection results.
+
+    Args:
+        text: Text to translate.
+        target_language: Target language code (e.g. 'en').
+        engine: One of 'google', 'my_memory', 'translate_com'.
+
+    Returns:
+        dict with 'translation' and 'origin_lang' keys, or None if failed.
+    """
+    try:
+        from py_trans import PyTranslator
+        tr = PyTranslator()
+
+        if engine == "google":
+            result = tr.google(text, target_language)
+        elif engine == "my_memory":
+            result = tr.my_memory(text, target_language)
+        elif engine == "translate_com":
+            result = tr.translate_com(text, target_language)
+        else:
+            return None
+
+        if (
+            result
+            and result.get("status") == "success"
+            and result.get("translation")
+            and not _texts_are_similar(text, result["translation"])
+        ):
+            return result
+    except Exception as e:
+        logger.debug("py-trans %s failed for '%s': %s", engine, text[:60], e)
+    return None
 
 
 _COMMON_ENGLISH = {
@@ -212,7 +470,8 @@ _TANGLISH_WORDS = {
     "konjam", "thaan", "dhaan", "amma", "anna", "akka", "thambi",
     "vanakkam", "nandri", "enakku", "unnoda", "ungalukku", "neenga", "neengal",
     "naan", "naanga", "avanga", "ivanga", "ithu", "athu", "oru",
-    "irukken", "irukkanga", "iruku", "aana", "aanalum", "aanaa",
+    "irukken", "irukkanga", "iruku", "iruka", "irukka", "irukaa",
+    "aana", "aanalum", "aanaa",
     "innum", "innaiku", "nalaiku", "naalaikku", "naalaiku", "mela", "keela", "pakka",
     "varadhu", "varuvaa", "varuven", "varala", "poradhu", "kudukka", "edukka",
     "vara", "varaa", "varaadhu", "varaathu", "varen", "vareenga", "varuvom",
@@ -235,6 +494,24 @@ _TANGLISH_WORDS = {
     "pogalaam", "vaalaam", "panlaam", "solra", "solranga", "panra", "panranga",
     "irundha", "irundhaal", "vandha", "pona", "sonna",
     "therinja", "purinja", "kedaichu", "kedaikum", "kedaikala",
+    # Common YouTube comment words in Tanglish
+    "padam", "padama", "pathu", "paarunga", "subscribe", "pannunga",
+    "vera", "level", "thalaiva", "thalaivan", "thalaivar",
+    "nanba", "tamizh", "tamil", "ennaku", "pidikum", "pidikkum",
+    "kovam", "santhosham", "bayam", "kashtam", "kastam",
+    "seri", "serigaa", "theriyum", "theriyala", "sollu", "sollunga",
+    "paakalam", "ketpom", "kelunga", "varum", "pogum",
+    "nallavanga", "kettavanga", "periya", "chinna", "pudhusu",
+    "eppadi", "yeppadi", "yenna", "yaen", "yean", "yen",
+    "pakkathula", "nimmathiya", "podhum", "konjam", "niraiya",
+    # Question forms and conversational words
+    "eppadi", "eppdi", "eppo", "evlo", "enga", "ethuku",
+    "pannuva", "pannuvanga", "varuva", "varuvanga", "irukkum",
+    "sollunga", "solluga", "pannuga", "parunga", "kelunga",
+    "theriyuma", "puriyuma", "mudiyuma", "kedaikuma",
+    "pannalaam", "pogalaam", "varalaam", "sollalaam",
+    "theriyadha", "puriyaadha", "mudiyaadha",
+    "pannirukkanga", "vandhirukkanga", "sollirukkanga",
 }
 
 # Common Hindi words written in English script (Hinglish indicators)
@@ -288,15 +565,17 @@ def _detect_indian_language(text):
     tamil_score = 0
     hindi_score = 0
 
+    non_english_count = 0
     for w in clean_words:
         if w in _COMMON_ENGLISH:
             continue
+        non_english_count += 1
         if w in _TANGLISH_WORDS:
             tamil_score += 1
         if w in _HINGLISH_WORDS:
             hindi_score += 1
         # Check suffixes for words not in dictionaries
-        if len(w) > 3:
+        if len(w) > 2:
             if any(w.endswith(s) for s in _TAMIL_SUFFIXES):
                 tamil_score += 0.5
             if any(w.endswith(s) for s in _HINDI_SUFFIXES):
@@ -310,6 +589,13 @@ def _detect_indian_language(text):
         return "ta"
     if hindi_score > 0:
         return "hi"
+
+    # If there are non-English words but no specific language detected,
+    # return "mixed" to signal Claude should handle it
+    if non_english_count >= 2 and len(clean_words) > 2:
+        english_ratio = sum(1 for w in clean_words if w in _COMMON_ENGLISH) / len(clean_words)
+        if english_ratio < 0.8:
+            return "mixed"
 
     return None
 
@@ -327,7 +613,7 @@ def _translate_with_claude(text, target_language, detected_lang_hint=None):
     lang_names = {
         "ta": "Tamil", "hi": "Hindi", "te": "Telugu", "kn": "Kannada",
         "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati",
-        "pa": "Punjabi", "ur": "Urdu",
+        "pa": "Punjabi", "ur": "Urdu", "mixed": "an Indian language",
     }
     target_name = _lang_code_to_name(target_language) or target_language
 
@@ -349,25 +635,37 @@ def _translate_with_claude(text, target_language, detected_lang_hint=None):
                 {
                     "role": "user",
                     "content": (
-                        f"Translate the following social media comment to {target_name}.\n\n"
-                        "The text is written in an Indian language using English/Latin "
-                        "letters (transliterated). Common examples:\n"
-                        "- Tanglish: Tamil words in English script (e.g. 'nalaiku' = tomorrow, "
-                        "'anna' = brother/bro, 'varaa' = come, 'mala/mazhai' = rain, "
-                        "'illa' = no/not, 'dhu' = negation suffix)\n"
-                        "- Hinglish: Hindi words in English script (e.g. 'kal' = tomorrow, "
-                        "'bhai' = brother, 'nahi' = no)\n"
+                        f"Translate this social media comment to {target_name}.\n\n"
+                        "The text is likely Tanglish (Tamil+English) or Hinglish (Hindi+English) "
+                        "where Indian language words are written in English/Latin letters, "
+                        "often mixed with actual English words in the same sentence.\n\n"
+                        "TANGLISH EXAMPLES:\n"
+                        "- 'bro anga placements la iruka?' = 'Bro, are there placements there?'\n"
+                        "- 'nalla irukku' = 'It is good'\n"
+                        "- 'semma video da' = 'Great video man'\n"
+                        "- 'enna price bro' = 'What is the price bro?'\n"
+                        "- 'bro eppo release pannuva' = 'Bro when will you release it?'\n"
+                        "- 'romba nalla explain pannirukeenga' = 'You explained very well'\n"
+                        "- 'subscribe pannunga friends' = 'Subscribe friends'\n\n"
+                        "HINGLISH EXAMPLES:\n"
+                        "- 'bahut accha hai bhai' = 'It is very good brother'\n"
+                        "- 'ye kab aayega' = 'When will this come?'\n"
+                        "- 'price kitna hai' = 'What is the price?'\n\n"
+                        "RULES:\n"
+                        "1. Keep English words (placements, video, subscribe, etc.) as-is in translation\n"
+                        "2. Translate the MEANING of regional words, not their English spelling\n"
+                        "3. Produce natural, fluent English — not word-by-word\n"
                         f"{hint}\n\n"
-                        "Respond with ONLY a JSON object with two keys:\n"
-                        '- "translated_text": the accurate English translation\n'
-                        '- "detected_language": the original language name in lowercase '
-                        '(e.g. "tamil", "hindi", "telugu")\n\n'
+                        "Respond with ONLY a JSON object:\n"
+                        f'{{"translated_text": "accurate {target_name} translation", '
+                        '"detected_language": "tanglish" or "hinglish" or language name}\n\n'
                         f"Text: {text}"
                     ),
                 }
             ],
         )
         raw = message.content[0].text.strip()
+        logger.info("Claude translate raw response: %s", raw[:200])
         # Handle case where Claude wraps JSON in markdown code blocks
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -379,8 +677,9 @@ def _translate_with_claude(text, target_language, detected_lang_hint=None):
                 "translated_text": translated,
                 "detected_language": detected,
             }
-    except Exception:
-        pass
+        logger.warning("Claude translation rejected (too similar): '%s' vs '%s'", text[:80], translated[:80])
+    except Exception as e:
+        logger.error("Claude translation failed for '%s': %s", text[:80], e)
     return None
 
 
@@ -437,7 +736,7 @@ def _try_transliterate_and_translate(text, target_language, source_hint="auto"):
 
     for lang_code in langs_to_try[:5]:  # Try top 5 languages
         try:
-            native_text = _transliterate_to_native(text, lang_code)
+            native_text = _transliterate_aggressive(text, lang_code)
             if not native_text or native_text == text:
                 continue
 
@@ -500,11 +799,31 @@ def _is_mixed_script(text):
     return False
 
 
+def _is_known_regional_word(word, lang_code):
+    """Check if a word is a known Tamil/Hindi word that should be transliterated."""
+    clean = word.rstrip(".,!?;:'\"").lower()
+    if clean in _COMMON_ENGLISH:
+        return False
+    if lang_code == "ta" or lang_code is None:
+        if clean in _TANGLISH_WORDS:
+            return True
+        if len(clean) > 2 and any(clean.endswith(s) for s in _TAMIL_SUFFIXES):
+            return True
+    if lang_code == "hi" or lang_code is None:
+        if clean in _HINGLISH_WORDS:
+            return True
+        if len(clean) > 2 and any(clean.endswith(s) for s in _HINDI_SUFFIXES):
+            return True
+    return False
+
+
 def _transliterate_to_native(text, lang_code):
     """Convert Latin-script text to native script using Google Input Tools.
 
-    Processes text word-by-word, skipping English words to handle
-    mixed Tanglish/Hinglish text correctly.
+    Only transliterates words that are known Tamil/Hindi words (from our
+    dictionaries or suffix patterns). All other words — including English
+    words NOT in _COMMON_ENGLISH like "placements", "college" — are kept
+    as-is to prevent Google Translate from corrupting them.
     """
     import requests as _req
     try:
@@ -512,8 +831,8 @@ def _transliterate_to_native(text, lang_code):
         result_words = []
         for word in words:
             clean = word.rstrip(".,!?;:'\"").lower()
-            # Keep English words as-is (don't transliterate them)
-            if clean in _COMMON_ENGLISH or (len(clean) <= 2 and clean.isascii()):
+            # Only transliterate words we're confident are regional language
+            if not _is_known_regional_word(word, lang_code):
                 result_words.append(word)
                 continue
             resp = _req.get(
@@ -539,6 +858,82 @@ def _transliterate_to_native(text, lang_code):
     except Exception:
         pass
     return text
+
+
+_ENGLISH_SUFFIXES = (
+    "ment", "ments", "tion", "tions", "sion", "sions", "ness", "ness",
+    "able", "ible", "ful", "less", "ous", "ious", "ive", "ical",
+    "ing", "ings", "ated", "tion", "ally", "ment", "ence", "ance",
+    "ship", "ward", "wise", "like", "ology", "ular", "ity",
+)
+
+
+def _looks_like_english_word(word):
+    """Check if a word looks like an English word based on morphology."""
+    w = word.lower()
+    if w in _COMMON_ENGLISH:
+        return True
+    # English morphological patterns (plurals, past tense, etc.)
+    if any(w.endswith(s) for s in _ENGLISH_SUFFIXES):
+        return True
+    # Common English plural/past forms
+    if len(w) > 3 and w.endswith("s") and w[:-1] in _COMMON_ENGLISH:
+        return True
+    if len(w) > 3 and w.endswith("ed") and w[:-2] in _COMMON_ENGLISH:
+        return True
+    if len(w) > 4 and w.endswith("ing") and w[:-3] in _COMMON_ENGLISH:
+        return True
+    return False
+
+
+def _transliterate_aggressive(text, lang_code="ta"):
+    """Aggressively transliterate ALL non-English words to native script.
+
+    Unlike _transliterate_to_native() which only converts known dictionary
+    words, this sends every non-English word through Google Input Tools.
+    This handles Tanglish words missing from our dictionary like 'vazhkaila',
+    'padichirukken', etc.
+    """
+    import requests as _req
+    try:
+        words = text.split()
+        result_words = []
+        for word in words:
+            clean = word.rstrip(".,!?;:'\"").lower()
+            # Skip English words (common set + morphological patterns)
+            if _looks_like_english_word(clean) or len(clean) <= 1:
+                result_words.append(word)
+                continue
+            try:
+                resp = _req.get(
+                    "https://inputtools.google.com/request",
+                    params={
+                        "text": word,
+                        "itc": f"{lang_code}-t-i0-und",
+                        "num": 1,
+                        "cp": 0,
+                        "cs": 1,
+                        "ie": "utf-8",
+                        "oe": "utf-8",
+                    },
+                    timeout=3,
+                )
+                data = resp.json()
+                if data[0] == "SUCCESS" and data[1]:
+                    candidates = data[1][0][1]
+                    native_word = candidates[0] if candidates else word
+                    # Only use if it actually produced non-Latin characters
+                    if any(not c.isascii() for c in native_word if c.isalpha()):
+                        result_words.append(native_word)
+                    else:
+                        result_words.append(word)
+                else:
+                    result_words.append(word)
+            except Exception:
+                result_words.append(word)
+        return " ".join(result_words)
+    except Exception:
+        return text
 
 
 def _detect_language_code(text):
@@ -623,59 +1018,144 @@ _NEGATIVE_EMOJIS = set("😡😠👎💔😤😢😭🤮🤬😒😞😔😩😫
 
 
 def _heuristic_sentiment(text, skip_translate=False):
-    """Keyword-based sentiment fallback when no API key is available.
+    """NLP ensemble sentiment analysis: VADER + TextBlob + regional keywords.
 
-    Translates non-English text to English first using Google Translate
-    so that keyword matching works across all languages.
-    Set skip_translate=True for bulk processing to avoid slow API calls.
+    Pipeline:
+    1. Lead detection (contact info patterns).
+    2. VADER on ORIGINAL text (preserves capitalization, punctuation, emojis).
+    3. NLP preprocess (tokenize + lemmatize + stop-word removal) → TextBlob.
+    4. Regional keyword scoring (Tanglish/Hinglish dictionaries).
+    5. Emoji signal scoring.
+    6. For non-English with weak signal: translate → re-run VADER + TextBlob.
+    7. Weighted ensemble: VADER 0.40, TextBlob 0.25, Regional 0.20, Emoji 0.15.
     """
-    text_lower = text.lower()
+    if not text or not text.strip():
+        return {"sentiment": "neutral", "score": 0.5}
 
-    # Translate non-English text to English for keyword matching
-    if not skip_translate and not _is_latin_script(text):
-        try:
-            from deep_translator import GoogleTranslator
-            translated = GoogleTranslator(source="auto", target="en").translate(text)
-            if translated:
-                text_lower = translated.lower()
-        except Exception:
-            pass  # fall through with original text
+    orig_lower = text.lower()
 
-    positive_words = {
-        "good", "great", "love", "excellent", "amazing", "best",
-        "awesome", "thank", "happy", "wonderful", "fantastic", "perfect",
-        "beautiful", "brilliant", "impressed", "recommend", "satisfied",
-        "helpful", "nice", "superb", "outstanding", "incredible",
-        "appreciate", "favorite", "favourite", "worth", "reliable",
-    }
-    negative_words = {
-        "bad", "terrible", "worst", "hate", "awful", "poor",
-        "horrible", "scam", "fraud", "disgusting", "disappointed", "useless",
-        "waste", "regret", "cheat", "fake", "broken", "pathetic",
-        "rubbish", "ridiculous", "angry", "complaint", "sucks",
-        "overpriced", "defective", "not worth", "no solution",
-        "don't buy", "do not buy", "never buy", "rip off", "ripoff",
-        "not recommend", "unreliable", "frustrat", "mislead", "liar",
-        "damage", "refund", "problem", "issue", "fail", "worse",
-    }
-    lead_words = {"call me", "contact me", "my number", "my email", "reach me", "phone"}
-
-    for phrase in lead_words:
-        if phrase in text_lower:
+    # ── Step 0: Lead detection ──
+    lead_phrases = {"call me", "contact me", "my number", "my email", "reach me", "phone"}
+    for phrase in lead_phrases:
+        if phrase in orig_lower:
             return {"sentiment": "lead", "score": 0.8}
 
-    pos = sum(1 for w in positive_words if w in text_lower)
-    neg = sum(1 for w in negative_words if w in text_lower)
+    # ── Step 1: VADER on ORIGINAL text ──
+    vader = _get_vader()
+    vader_compound = 0.0
+    vader_available = False
+    if vader:
+        scores = vader.polarity_scores(text)
+        vader_compound = scores["compound"]
+        vader_available = True
 
-    # Emoji-based sentiment (works for all languages without translation)
-    for ch in text:
-        if ch in _POSITIVE_EMOJIS:
-            pos += 1
-        elif ch in _NEGATIVE_EMOJIS:
-            neg += 1
+    # ── Step 2: TextBlob on preprocessed text ──
+    preprocessed = _nlp_preprocess(text)
+    tb_polarity, tb_subjectivity = _textblob_sentiment(preprocessed)
 
-    if pos > neg:
-        return {"sentiment": "positive", "score": min(0.5 + pos * 0.1, 1.0)}
-    elif neg > pos:
-        return {"sentiment": "negative", "score": max(0.5 - neg * 0.1, 0.0)}
-    return {"sentiment": "neutral", "score": 0.5}
+    # ── Step 3: Regional keyword scoring (Tanglish/Hinglish) ──
+    tanglish_positive = {
+        "nalla", "nallaa", "super", "semma", "mass", "gethu",
+        "arumai", "azhaga", "azhagaa", "nandri", "romba nalla",
+        "kalakkal", "adipoli", "theri", "vera level", "vera maari",
+        "pidikum", "pidikkum", "pidichirukku", "azhaku",
+        "magizhchi", "santhosham", "mikka nandri", "nalla irukku",
+        "sirantha", "peruma", "perumaya", "mikavum",
+        "nalla panreenga", "nalla solreenga",
+    }
+    tanglish_negative = {
+        "mokka", "kaduppu", "kovam", "ketta", "kettadhu",
+        "mosam", "mosamaa", "bayam", "kashtam", "kastam",
+        "kedaikala", "pudikkala", "pudikala", "venam", "venda",
+        "asingam", "asingama", "mayiru", "mairu", "thevai illa",
+        "thalai vali", "bore", "boredhu", "mosam pannunga",
+        "olunga", "olungaa", "mokka video", "koluthi podu",
+        "onnum illa", "waste pannaadha", "use illa",
+    }
+    hinglish_positive = {
+        "accha", "achha", "bahut accha", "mast", "zabardast",
+        "kamaal", "shandaar", "shaandar", "behtareen", "pyaara",
+        "sundar", "badhiya", "jhakaas", "waah", "sahi hai",
+        "bohot acha", "dil khush", "pasand aaya", "tagda",
+    }
+    hinglish_negative = {
+        "bakwas", "bekar", "ghatiya", "wahiyat", "ganda",
+        "galat", "bura", "kharab", "tatti", "faltu",
+        "dhoka", "jhooth", "jhootha", "paisa barbaad",
+        "time waste", "bekaar", "nautanki", "bakwaas",
+    }
+
+    regional_pos = sum(1 for w in tanglish_positive if w in orig_lower)
+    regional_pos += sum(1 for w in hinglish_positive if w in orig_lower)
+    regional_neg = sum(1 for w in tanglish_negative if w in orig_lower)
+    regional_neg += sum(1 for w in hinglish_negative if w in orig_lower)
+    regional_signal = (regional_pos - regional_neg) * 0.30
+
+    # ── Step 4: Emoji signal ──
+    emoji_pos = sum(1 for ch in text if ch in _POSITIVE_EMOJIS)
+    emoji_neg = sum(1 for ch in text if ch in _NEGATIVE_EMOJIS)
+    emoji_signal = (emoji_pos - emoji_neg) * 0.1
+
+    # ── Step 5: Translate + re-score for non-English with weak signals ──
+    translated_vader = 0.0
+    translated_tb = 0.0
+    has_translation = False
+    if not skip_translate and vader_available:
+        primary_signal = abs(vader_compound) + abs(tb_polarity)
+        if primary_signal < 0.5:
+            is_non_english = not _is_latin_script(text)
+            is_mixed_lang = _detect_indian_language(text) is not None
+            if is_non_english or is_mixed_lang:
+                try:
+                    from deep_translator import GoogleTranslator
+                    translated = GoogleTranslator(
+                        source="auto", target="en"
+                    ).translate(text)
+                    if translated and not _texts_are_similar(text, translated):
+                        translated_vader = vader.polarity_scores(translated)["compound"]
+                        trans_preprocessed = _nlp_preprocess(translated)
+                        translated_tb, _ = _textblob_sentiment(trans_preprocessed)
+                        has_translation = True
+                except Exception:
+                    pass
+
+    # ── Step 6: Weighted ensemble ──
+    if has_translation:
+        effective_vader = (
+            translated_vader
+            if abs(translated_vader) > abs(vader_compound)
+            else vader_compound
+        )
+        effective_tb = (
+            translated_tb
+            if abs(translated_tb) > abs(tb_polarity)
+            else tb_polarity
+        )
+    else:
+        effective_vader = vader_compound if vader_available else 0.0
+        effective_tb = tb_polarity
+
+    # Subjectivity boost: opinionated text → increase TextBlob weight
+    tb_weight = 0.25
+    vader_weight = 0.40
+    if tb_subjectivity > 0.6:
+        tb_weight = 0.30
+        vader_weight = 0.35
+
+    final_score = (
+        effective_vader * vader_weight
+        + effective_tb * tb_weight
+        + regional_signal * 0.20
+        + emoji_signal * 0.15
+    )
+    final_score = max(-1.0, min(1.0, final_score))
+
+    # ── Step 7: Classify ──
+    if final_score >= 0.05:
+        confidence = 0.55 + (min(final_score, 1.0) - 0.05) * (0.4 / 0.95)
+        return {"sentiment": "positive", "score": round(confidence, 2)}
+    elif final_score <= -0.05:
+        confidence = 0.45 - (abs(final_score) - 0.05) * (0.4 / 0.95)
+        return {"sentiment": "negative", "score": round(confidence, 2)}
+    else:
+        return {"sentiment": "neutral", "score": 0.5}
