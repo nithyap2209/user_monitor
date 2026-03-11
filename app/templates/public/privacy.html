@@ -29,152 +29,141 @@
 
     <!-- Content -->
     <div class="max-w-4xl mx-auto px-6 py-14">
-        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-2">Privacy Policy</h1>
-        <p class="text-sm text-gray-400 mb-10">Effective Date: March 2026 &middot; Last Updated: March 2026</p>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Privacy Policy</h1>
 
         <div class="space-y-8 text-gray-600 text-[15px] leading-relaxed">
 
-            <!-- Principles -->
+            <p>At Fourth Dimension User Monitor, we are committed to protecting your privacy and respecting the data you trust us with. This Privacy Policy explains what data we collect, how we use it, what rights you have, and how we secure and manage your information.</p>
+
+            <!-- Key Principles -->
             <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-6">
-                <h3 class="font-bold text-indigo-900 mb-3">Our Privacy Principles</h3>
-                <ul class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <li class="flex items-start gap-2"><i class="fas fa-shield-alt text-indigo-500 mt-1 text-sm"></i><span>We do not sell or rent your personal data to anyone.</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-database text-indigo-500 mt-1 text-sm"></i><span>We only collect information essential to provide our service.</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-user-lock text-indigo-500 mt-1 text-sm"></i><span>You retain full control over your data, including the right to delete it.</span></li>
-                    <li class="flex items-start gap-2"><i class="fas fa-lock text-indigo-500 mt-1 text-sm"></i><span>We use industry-standard security measures to protect your information.</span></li>
+                <h3 class="font-bold text-indigo-900 mb-3">Key Privacy Principles</h3>
+                <ul class="space-y-2">
+                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>We do not sell or rent your data to third parties</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>We collect only essential information to provide our services</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>You have full control over your data and can request deletion at any time</span></li>
+                    <li class="flex items-start gap-2"><i class="fas fa-check-circle text-indigo-500 mt-1 text-sm"></i><span>We use industry-standard security measures to protect your information</span></li>
                 </ul>
             </div>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">1. Scope and Purpose</h2>
-                <p>This Privacy Policy applies to all users of the User Monitor platform and website. By accessing or using our service, you acknowledge that you have read and understood this Privacy Policy. Continued use of the platform constitutes agreement with these practices.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Scope and Purpose</h2>
+                <p>This Privacy Policy applies to all users of the Fourth Dimension User Monitor platform, website, and associated services. By accessing or using Fourth Dimension User Monitor, you agree to the practices described here. If you do not agree with this policy, you should not use our services.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">2. Information We Collect</h2>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Information We Collect</h2>
 
-                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Account Data</h3>
-                <ul class="list-disc pl-6 space-y-1">
-                    <li>Name, email address, and encrypted passwords</li>
-                    <li>Company name (optional)</li>
-                    <li>Role and designation within your organization</li>
-                </ul>
-
-                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Social Media Data</h3>
-                <ul class="list-disc pl-6 space-y-1">
-                    <li>Comments, posts, author names, and engagement metrics fetched from your connected social media accounts (YouTube, Facebook, Instagram, LinkedIn, Twitter) via their official APIs</li>
-                    <li>OAuth tokens and API keys you provide to connect your social media accounts</li>
-                    <li>Sync timestamps and comment counts</li>
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Account Information</h3>
+                <p>When you register for Fourth Dimension User Monitor, we collect:</p>
+                <ul class="list-disc pl-6 space-y-1 mt-2">
+                    <li>Name and email address</li>
+                    <li>Password (hashed and encrypted)</li>
+                    <li>Company name (if applicable)</li>
+                    <li>Billing and subscription details (processed via third-party payment gateways)</li>
                 </ul>
 
                 <h3 class="font-semibold text-gray-800 mt-4 mb-2">Usage and Technical Data</h3>
-                <ul class="list-disc pl-6 space-y-1">
+                <p>When you use Fourth Dimension User Monitor, we collect:</p>
+                <ul class="list-disc pl-6 space-y-1 mt-2">
+                    <li>URLs you scan and the time of each scan</li>
+                    <li>Number of audits performed</li>
                     <li>Browser type, IP address, operating system, and device type</li>
-                    <li>Pages visited, features used, and actions taken within the dashboard</li>
-                    <li>Comment analysis results (sentiment scores, translations)</li>
+                    <li>Interactions with specific platform features</li>
                 </ul>
 
-                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Cookies and Session Data</h3>
-                <p>We use cookies for secure login, session tracking, and CSRF protection. See our <a href="{{ url_for('public.cookies') }}" class="text-indigo-600 hover:underline">Cookie Policy</a> for full details.</p>
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Cookies and Analytics</h3>
+                <p>We use cookies for secure login, session tracking, and analytics to improve your user experience.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">3. How We Use Your Information</h2>
-                <ul class="list-disc pl-6 space-y-1">
-                    <li>To provide, maintain, and improve the User Monitor service</li>
-                    <li>To fetch, display, and analyze comments from your connected social media pages</li>
-                    <li>To perform AI-powered sentiment analysis and language translations on comments</li>
-                    <li>To enable you to reply to comments directly from the dashboard</li>
-                    <li>To automatically detect and extract contact information (leads) from comments</li>
-                    <li>To send service-related communications (email verification, password resets)</li>
-                    <li>To maintain security, prevent fraud, and ensure platform stability</li>
-                    <li>To comply with legal obligations</li>
-                </ul>
-                <p class="mt-3">Your data is <strong>not</strong> used for third-party marketing or advertising purposes.</p>
-            </section>
-
-            <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">4. Data Sharing</h2>
-                <p>We do <strong>not</strong> sell, trade, or rent your personal data. We may share data only with:</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">How We Use Your Information</h2>
+                <p>We use your information to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
-                    <li><strong>Social Media Platforms:</strong> When you reply to comments or perform actions, data is sent to the respective platform (YouTube, Facebook, etc.) via their official API.</li>
-                    <li><strong>Translation Services:</strong> Comment text may be sent to Google Translate for translation purposes.</li>
-                    <li><strong>AI Services:</strong> Comment text may be processed by AI services (e.g., OpenAI GPT) for sentiment analysis, if configured by your administrator.</li>
-                    <li><strong>Legal Authorities:</strong> When required by law, regulation, or legal process.</li>
-                    <li><strong>Internal Authorized Personnel:</strong> Team members with appropriate role-based access within your organization.</li>
+                    <li>Provide and manage access to Fourth Dimension User Monitor features</li>
+                    <li>Process subscriptions and generate invoices</li>
+                    <li>Improve user experience, identify usage patterns, and optimize product flows</li>
+                    <li>Communicate updates, feature releases, or billing notifications</li>
+                    <li>Ensure system stability and security</li>
+                    <li>Comply with legal obligations and respond to lawful requests</li>
                 </ul>
+                <p class="mt-3">We do not use your data for third-party marketing or advertising purposes.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">5. Data Retention</h2>
-                <p>We retain your data for as long as your account is active. Upon account deletion:</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Sharing and Disclosure</h2>
+                <p>We do not sell or rent your data. We may share data only in the following circumstances:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
-                    <li>Synced comments, posts, and analysis data are removed within 60 days</li>
-                    <li>API credentials and OAuth tokens are deleted immediately</li>
-                    <li>System logs may be retained as required by law</li>
+                    <li><strong>With trusted service providers:</strong> For payment processing, cloud hosting, and analytics under confidentiality agreements</li>
+                    <li><strong>With legal authorities:</strong> When required to comply with applicable laws, court orders, or government regulations</li>
+                    <li><strong>Within our organization:</strong> For internal operations by authorized personnel</li>
                 </ul>
-                <p class="mt-2">You may request deletion of your account and associated data at any time by contacting your administrator.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">6. Data Security</h2>
-                <p>We implement industry-standard security measures to protect your data:</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Retention</h2>
+                <p>We retain your account data for as long as your account is active or as needed to fulfill the purposes outlined in this policy. If you cancel your subscription or delete your account, we will retain billing records and system logs as required by law, and remove audit-related data and user activity logs within 60 days, unless retention is legally mandated.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Data Security</h2>
+                <h3 class="font-semibold text-gray-800 mt-4 mb-2">Industry-Standard Security</h3>
+                <p>We use industry-standard security measures to protect your information, including:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
-                    <li>HTTPS encryption for all data in transit</li>
-                    <li>Secure cloud infrastructure hosting</li>
-                    <li>Encrypted password storage (hashed with salt)</li>
-                    <li>CSRF protection on all form submissions and API calls</li>
-                    <li>Role-based access controls and permission management</li>
-                    <li>OAuth tokens stored securely in the database</li>
+                    <li>Encrypted transmission (HTTPS)</li>
+                    <li>Secure cloud infrastructure with access controls</li>
+                    <li>Encrypted password storage and tokenized sessions</li>
+                    <li>Role-based access control for internal staff</li>
                 </ul>
+                <p class="mt-3">While we take every precaution to safeguard your data, no method of transmission or storage is 100% secure. We encourage strong passwords and responsible access practices.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">7. Your Rights</h2>
-                <p>You have the right to:</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Your Rights</h2>
+                <p>As a Fourth Dimension User Monitor user, you have the right to:</p>
                 <ul class="list-disc pl-6 space-y-1 mt-2">
                     <li>Access the personal data we hold about you</li>
                     <li>Request corrections to inaccurate information</li>
-                    <li>Request deletion of your account and data</li>
-                    <li>Disconnect social media accounts at any time</li>
+                    <li>Request deletion of your account and associated data</li>
                     <li>Withdraw consent for non-essential data processing</li>
-                    <li>Opt out of non-critical communications</li>
-                    <li>Export your data</li>
+                    <li>Opt out of non-critical product communications</li>
                 </ul>
-                <p class="mt-2">Requests will be addressed within 7–10 working days.</p>
+                <p class="mt-3">To exercise these rights, contact our support team. We will respond within 7–10 working days.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">8. International Operations</h2>
-                <p>User Monitor operates from India. Your data is processed and stored in India under applicable Indian data protection laws. By using the service, you consent to the transfer and processing of your data in India.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">International Access and Storage</h2>
+                <p>Fourth Dimension User Monitor is operated from India. If you are accessing the service from outside India, you consent to your data being processed and stored in India under Indian data protection laws.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">9. Children's Privacy</h2>
-                <p>User Monitor is not intended for users under the age of 18. We do not knowingly collect personal information from minors. If we discover that data has been collected from a user under 18, it will be deleted immediately.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Children's Privacy</h2>
+                <p>Fourth Dimension User Monitor is not intended for use by individuals under 18 years of age. We do not knowingly collect data from minors. If we learn that we have collected personal data from someone underage, we will delete it immediately.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">10. Third-Party Links</h2>
-                <p>Our platform may contain links to external websites (social media platforms, Google services, etc.). We are not responsible for the privacy practices of these external sites. We encourage you to review their privacy policies independently.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Third-Party Links and Integrations</h2>
+                <p>Our platform may contain links to external websites or services. We are not responsible for the privacy practices or content of these external entities. Use caution and review their policies before sharing any personal information.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">11. Changes to This Policy</h2>
-                <p>We may update this Privacy Policy from time to time. Material changes will be communicated via email or platform notifications. Continued use of the service after changes constitutes acceptance of the updated policy.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Grievance Officer</h2>
+                <p>In accordance with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, users can contact our designated grievance officer for privacy-related concerns.</p>
+                <p class="mt-2">Working Hours: Monday to Friday, 10:00 AM to 6:00 PM (IST)</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">12. Grievance Officer</h2>
-                <p>In accordance with IT Rules 2021, a Grievance Officer is available to address any concerns regarding data privacy. The officer is reachable Monday–Friday, 10:00 AM–6:00 PM (IST) via the contact information below.</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Updates to This Policy</h2>
+                <p>We may update this privacy policy from time to time to reflect legal, technical, or operational changes. When we make material changes, we will notify users by email or through platform alerts. Continued use of the Service after changes take effect implies your agreement with the updated policy.</p>
             </section>
 
             <section>
-                <h2 class="text-xl font-bold text-gray-900 mb-3">13. Contact Us</h2>
-                <p>If you have any questions or concerns about this Privacy Policy, please contact us:</p>
-                <div class="mt-3 bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <p><strong>Email:</strong> support@usermonitor.app</p>
-                    <p><strong>Platform:</strong> Contact your account administrator</p>
+                <h2 class="text-xl font-bold text-gray-900 mb-3">Contact Information</h2>
+                <p>For any privacy-related questions, concerns, or data access requests, please contact:</p>
+                <div class="mt-3 bg-gray-50 rounded-xl p-5 border border-gray-100">
+                    <p class="font-semibold text-gray-900">Fourth Dimension Media Solution</p>
+                    <p class="mt-2"><i class="fas fa-map-marker-alt text-indigo-500 mr-2"></i>Shyamala Towers, 3rd floor, No. 136, Arcot Rd, Saligramam, Chennai, Tamil Nadu 600092</p>
+                    <p class="mt-1"><i class="fas fa-envelope text-indigo-500 mr-2"></i>support@usermonitor.app</p>
                 </div>
             </section>
         </div>
